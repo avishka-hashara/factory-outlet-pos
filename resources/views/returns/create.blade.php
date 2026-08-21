@@ -62,7 +62,7 @@
                                                     <img src="{{ $item->product->image_url }}" class="rounded" style="width:36px;height:36px;object-fit:cover;" alt="">
                                                 @else
                                                     <div class="rounded bg-light d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                                                        <i class="fas fa-gem text-muted small"></i>
+                                                        <i class="fas fa-tshirt text-muted small"></i>
                                                     </div>
                                                 @endif
                                                 <div>

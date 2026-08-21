@@ -9,7 +9,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
     <!-- Page Header -->
     <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
         <div>
-            <h4><i class="fas fa-gem me-2 text-gold"></i> Products</h4>
+            <h4><i class="fas fa-tshirt me-2 text-gold"></i> Products</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
@@ -133,7 +133,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                     @else
                                         <div class="d-flex align-items-center justify-content-center rounded"
                                             style="width:40px;height:40px;background:var(--light-grey);">
-                                            <i class="fas fa-gem text-gold"></i>
+                                            <i class="fas fa-tshirt text-gold"></i>
                                         </div>
                                     @endif
                                 </td>
@@ -291,22 +291,32 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
                                 <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                                    placeholder="e.g. Gold Ring 18K" value="{{ old('name') }}" required>
+                                    placeholder="e.g. Classic Cotton Crewneck Tee" value="{{ old('name') }}" required>
                                 @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">SKU <span class="text-danger">*</span></label>
                                 <input type="text" name="sku" class="form-control @error('sku') is-invalid @enderror"
-                                    placeholder="e.g. GR-18K-001" value="{{ old('sku') }}" required>
+                                    placeholder="e.g. TSH-BLK-M" value="{{ old('sku') }}" required>
                                 @error('sku') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
                                 <input type="text" name="category" class="form-control @error('category') is-invalid @enderror"
-                                    placeholder="e.g. Men's Jewellery" value="{{ old('category') }}" list="categoryList" required>
+                                    placeholder="e.g. Men, Women, Kids, Unisex..." value="{{ old('category') }}" list="categoryList" required>
                                 <datalist id="categoryList">
+                                    <option value="Men">
+                                    <option value="Women">
+                                    <option value="Kids">
+                                    <option value="Unisex">
+                                    <option value="Tops">
+                                    <option value="Bottoms">
+                                    <option value="Outerwear">
+                                    <option value="Accessories">
                                     @foreach(\App\Models\Product::whereNotNull('category')->distinct()->pluck('category') as $_c)
-                                        <option value="{{ $_c }}">
+                                        @if(!in_array($_c, ['Men', 'Women', 'Kids', 'Unisex', 'Tops', 'Bottoms', 'Outerwear', 'Accessories']))
+                                            <option value="{{ $_c }}">
+                                        @endif
                                     @endforeach
                                 </datalist>
                                 @error('category') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -314,10 +324,22 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Sub-Category</label>
                                 <input type="text" name="subcategory" class="form-control @error('subcategory') is-invalid @enderror"
-                                    placeholder="e.g. Necklaces, Rings..." value="{{ old('subcategory') }}" list="subcategoryList">
+                                    placeholder="e.g. T-Shirts, Shirts, Jeans, Dresses..." value="{{ old('subcategory') }}" list="subcategoryList">
                                 <datalist id="subcategoryList">
+                                    <option value="T-Shirts">
+                                    <option value="Casual Shirts">
+                                    <option value="Formal Shirts">
+                                    <option value="Jeans">
+                                    <option value="Trousers">
+                                    <option value="Shorts">
+                                    <option value="Dresses">
+                                    <option value="Hoodies &amp; Sweatshirts">
+                                    <option value="Jackets">
+                                    <option value="Activewear">
                                     @foreach(\App\Models\Product::whereNotNull('subcategory')->distinct()->pluck('subcategory') as $_s)
-                                        <option value="{{ $_s }}">
+                                        @if(!in_array($_s, ['T-Shirts', 'Casual Shirts', 'Formal Shirts', 'Jeans', 'Trousers', 'Shorts', 'Dresses', 'Hoodies & Sweatshirts', 'Jackets', 'Activewear']))
+                                            <option value="{{ $_s }}">
+                                        @endif
                                     @endforeach
                                 </datalist>
                                 <div class="form-text">Optional — groups products under a main category.</div>
@@ -441,7 +463,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                         class="rounded d-none" style="height:70px;object-fit:cover;">
                                     <div id="edit_no_image" class="d-flex align-items-center justify-content-center rounded bg-light"
                                         style="width:70px;height:70px;">
-                                        <i class="fas fa-gem text-secondary"></i>
+                                        <i class="fas fa-tshirt text-secondary"></i>
                                     </div>
                                 </div>
                                 <input type="file" name="image" id="edit_image_input"
@@ -585,12 +607,12 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                     <div class="position-absolute" style="left:-25px; top:50%; transform:translateY(-50%) rotate(-90deg); font-size:0.6rem; color:#64748b; letter-spacing:1px;" id="lbl-dim-h">25mm</div>
                                     <div class="position-absolute" style="bottom:-20px; left:50%; transform:translateX(-50%); font-size:0.6rem; color:#64748b; letter-spacing:1px;" id="lbl-dim-w">38mm</div>
                                     
-                                    <div id="prev-brand" class="fw-bold" style="font-size: 8pt; letter-spacing: 0.5px; margin-bottom: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">GLAMON</div>
-                                    <div id="prev-tagline" style="font-size: 4.5pt; font-weight: bold; margin-bottom: 1mm; line-height:1; font-family:'Arial', sans-serif;">HIGH QUALITY | WATERPROOF</div>
+                                    <div id="prev-brand" class="fw-bold" style="font-size: 8pt; letter-spacing: 0.5px; margin-bottom: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">APPAREL OUTLET</div>
+                                    <div id="prev-tagline" style="font-size: 4.5pt; font-weight: bold; margin-bottom: 1mm; line-height:1; font-family:'Arial', sans-serif;">PREMIUM QUALITY | 100% COTTON</div>
                                     <svg id="barcode-svg" style="height:7mm; width:auto; display:block; margin:0 auto;"></svg>
-                                    <div id="prev-sku" class="fw-bold" style="font-size: 6pt; margin-top: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">GLM156G50</div>
-                                    <div id="prev-name" style="font-size: 5pt; margin-top: 0.5mm; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; font-family:'Arial', sans-serif;">2mm Cuban Nc GOLD 50cm</div>
-                                    <div id="prev-price" class="fw-bold" style="font-size: 7.5pt; margin-top: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">Rs. 2,190</div>
+                                    <div id="prev-sku" class="fw-bold" style="font-size: 6pt; margin-top: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">TSH-BLK-L</div>
+                                    <div id="prev-name" style="font-size: 5pt; margin-top: 0.5mm; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; font-family:'Arial', sans-serif;">Classic Cotton Crewneck Tee - Black (L)</div>
+                                    <div id="prev-price" class="fw-bold" style="font-size: 7.5pt; margin-top: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">Rs. 2,450</div>
                                 </div>
                             </div>
 
@@ -602,11 +624,11 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                     <div class="template-card border rounded p-2 text-center position-relative active-template" onclick="applyTemplate('standard', this)" style="cursor:pointer; border-color:#f59e0b!important;">
                                         <i class="fas fa-check-circle text-warning position-absolute top-0 end-0 m-1"></i>
                                         <div style="background:#f8fafc; border:1px solid #e2e8f0; height:60px; margin-bottom:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                            <div style="font-size:4px; font-weight:bold;">GLAMON</div>
-                                            <div style="font-size:3px;">HIGH QUALITY...</div>
+                                            <div style="font-size:4px; font-weight:bold;">APPAREL</div>
+                                            <div style="font-size:3px;">PREMIUM COTTON...</div>
                                             <div style="width:70%; height:10px; background:#333; margin:2px 0;"></div>
-                                            <div style="font-size:4px;">GLM156G50</div>
-                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,190</div>
+                                            <div style="font-size:4px;">TSH-BLK-L</div>
+                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,450</div>
                                         </div>
                                         <div class="fw-bold" style="font-size:0.75rem;">Standard</div>
                                         <div style="font-size:0.65rem; color:#64748b;">38mm x 25mm</div>
@@ -615,10 +637,10 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                 <div class="col-4">
                                     <div class="template-card border rounded p-2 text-center position-relative" onclick="applyTemplate('compact', this)" style="cursor:pointer;">
                                         <div style="background:#f8fafc; border:1px solid #e2e8f0; height:60px; margin-bottom:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                            <div style="font-size:5px; font-weight:bold;">GLAMON</div>
+                                            <div style="font-size:5px; font-weight:bold;">APPAREL</div>
                                             <div style="width:80%; height:12px; background:#333; margin:2px 0;"></div>
-                                            <div style="font-size:4px;">GLM156G50</div>
-                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,190</div>
+                                            <div style="font-size:4px;">TSH-BLK-L</div>
+                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,450</div>
                                         </div>
                                         <div class="fw-bold" style="font-size:0.75rem;">Compact</div>
                                         <div style="font-size:0.65rem; color:#64748b;">38mm x 20mm</div>
@@ -628,8 +650,8 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                     <div class="template-card border rounded p-2 text-center position-relative" onclick="applyTemplate('minimal', this)" style="cursor:pointer;">
                                         <div style="background:#f8fafc; border:1px solid #e2e8f0; height:60px; margin-bottom:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
                                             <div style="width:80%; height:15px; background:#333; margin-bottom:4px;"></div>
-                                            <div style="font-size:4px;">GLM156G50</div>
-                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,190</div>
+                                            <div style="font-size:4px;">TSH-BLK-L</div>
+                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,450</div>
                                         </div>
                                         <div class="fw-bold" style="font-size:0.75rem;">Minimal</div>
                                         <div style="font-size:0.65rem; color:#64748b;">38mm x 25mm</div>
@@ -690,7 +712,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                             <div class="form-check">
                                                 <input class="form-check-input check-brand" type="checkbox" id="chk-brand" checked onchange="togglePreview('brand')">
                                                 <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-brand">
-                                                    Brand Name (<span id="val-brand">GLAMON</span>)
+                                                    Brand Name (<span id="val-brand">APPAREL OUTLET</span>)
                                                 </label>
                                             </div>
                                             <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('brand')"><i class="fas fa-pen me-1"></i> Edit</button>
@@ -700,7 +722,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
                                             <div class="form-check">
                                                 <input class="form-check-input check-tagline" type="checkbox" id="chk-tagline" checked onchange="togglePreview('tagline')">
                                                 <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-tagline">
-                                                    Tagline (<span id="val-tagline">HIGH QUALITY | WATERPROOF</span>)
+                                                    Tagline (<span id="val-tagline">PREMIUM QUALITY | 100% COTTON</span>)
                                                 </label>
                                             </div>
                                             <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('tagline')"><i class="fas fa-pen me-1"></i> Edit</button>
@@ -1059,7 +1081,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
         minimal: { height: '25mm', display: ['sku', 'price'] }
     };
     let _currentTemplate = 'standard';
-    let _customText = { brand: 'GLAMON', tagline: 'HIGH QUALITY | WATERPROOF' };
+    let _customText = { brand: 'APPAREL OUTLET', tagline: 'PREMIUM QUALITY | 100% COTTON' };
 
     function openBarcodeModal(id, name, sku, price) {
         _bcProduct = { id, name, sku, price: parseFloat(price).toLocaleString('en-US', { minimumFractionDigits: 0 }) };
@@ -1219,7 +1241,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
     }
 
     function resetBarcodeDefaults() {
-        _customText = { brand: 'GLAMON', tagline: 'HIGH QUALITY | WATERPROOF' };
+        _customText = { brand: 'APPAREL OUTLET', tagline: 'PREMIUM QUALITY | 100% COTTON' };
         document.getElementById('val-brand').textContent = _customText.brand;
         document.getElementById('val-tagline').textContent = _customText.tagline;
         
@@ -1350,7 +1372,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
         const imgEl = document.getElementById(`ptd-img-${product.id}`);
         if (imgEl) imgEl.innerHTML = product.image_url
             ? `<img src="${product.image_url}" alt="${product.name}" class="rounded" style="width:40px;height:40px;object-fit:cover;">`
-            : `<div class="d-flex align-items-center justify-content-center rounded" style="width:40px;height:40px;background:var(--light-grey);"><i class="fas fa-gem text-gold"></i></div>`;
+            : `<div class="d-flex align-items-center justify-content-center rounded" style="width:40px;height:40px;background:var(--light-grey);"><i class="fas fa-tshirt text-gold"></i></div>`;
         const nameEl = document.getElementById(`ptd-nametxt-${product.id}`);
         if (nameEl) nameEl.textContent = product.name;
         const skuEl = document.getElementById(`ptd-sku-${product.id}`);
@@ -1381,7 +1403,7 @@ Shopify products (read-only) + Local in-store products (full CRUD)
         const stockCls = total > 5 ? 'text-success' : (total > 0 ? 'text-warning' : 'text-danger');
         const imgHtml = product.image_url
             ? `<img src="${product.image_url}" alt="${product.name}" class="rounded" style="width:40px;height:40px;object-fit:cover;">`
-            : `<div class="d-flex align-items-center justify-content-center rounded" style="width:40px;height:40px;background:var(--light-grey);"><i class="fas fa-gem text-gold"></i></div>`;
+            : `<div class="d-flex align-items-center justify-content-center rounded" style="width:40px;height:40px;background:var(--light-grey);"><i class="fas fa-tshirt text-gold"></i></div>`;
         const catHtml = `<span class="badge bg-light text-dark border">${product.category || '&mdash;'}</span>` +
             (product.subcategory ? `<br><span class="badge bg-secondary bg-opacity-25 text-secondary border mt-1" style="font-size:.7rem;"><i class="fas fa-angle-right me-1"></i>${product.subcategory}</span>` : '');
         const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';

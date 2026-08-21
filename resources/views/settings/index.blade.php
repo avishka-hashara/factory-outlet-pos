@@ -63,7 +63,7 @@
 
                             <div class="mb-3">
                                 <label for="app_name" class="form-label">Application Name</label>
-                                <input type="text" class="form-control" id="app_name" name="app_name" value="{{ \App\Models\Setting::get('app_name', config('app.name', 'Jewellery POS')) }}">
+                                <input type="text" class="form-control" id="app_name" name="app_name" value="{{ \App\Models\Setting::get('app_name', config('app.name', 'Clothing Outlet POS')) }}">
                             </div>
 
                             <div class="mb-3">

@@ -67,12 +67,12 @@ Jewellery POS System
                 @else
                     <div class="receipt-logo-icon">&#9670;</div>
                 @endif
-                <div class="receipt-store-name">{{ $settings['invoice_shop_name'] ?? 'Jewellery POS' }}</div>
-                <div class="receipt-store-tagline">{{ $settings['invoice_tagline'] ?? 'Premium Jewellery Store' }}</div>
+                <div class="receipt-store-name">{{ $settings['invoice_shop_name'] ?? 'Clothing Outlet POS' }}</div>
+                <div class="receipt-store-tagline">{{ $settings['invoice_tagline'] ?? 'Premium Quality Apparel' }}</div>
                 <div class="receipt-store-info">
-                    <span>{{ $settings['invoice_address'] ?? '123 Main Street, Colombo 03' }}</span><br>
+                    <span>{{ $settings['invoice_address'] ?? '123 Fashion Avenue, Colombo 03' }}</span><br>
                     <span>Phone: {{ $settings['invoice_phone'] ?? '+94 11 234 5678' }}</span><br>
-                    <span>{{ $settings['invoice_email'] ?? 'info@jewellerypos.com' }}</span>
+                    <span>{{ $settings['invoice_email'] ?? 'info@clothingoutlet.lk' }}</span>
                 </div>
             </div>
 

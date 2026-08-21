@@ -141,7 +141,9 @@ class POSController extends Controller
                 ->first();
         }
 
-        return view('pos.index', compact('products', 'collections', 'localCategories', 'needsCategorySync', 'pendingGiftCard'));
+        $nextBillNo = (Sale::max('id') ?? 0) + 1;
+
+        return view('pos.index', compact('products', 'collections', 'localCategories', 'needsCategorySync', 'pendingGiftCard', 'nextBillNo'));
     }
 
     public function search(Request $request): JsonResponse

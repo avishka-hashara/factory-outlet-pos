@@ -1,23 +1,36 @@
 <!-- ============================================
      Top Navbar - Jewellery POS System
      ============================================ -->
-<nav class="navbar navbar-expand-lg navbar-dark pos-navbar fixed-top pe-3 ps-0">
+<nav class="navbar navbar-expand-lg navbar-dark pos-navbar fixed-top px-3">
     <div class="container-fluid px-0">
         <!-- Left Group: Toggle + Brand -->
-        <div class="d-flex align-items-center me-auto">
-            <div class="d-flex justify-content-center align-items-center" style="width: 70px;">
+        <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center align-items-center" style="width: 54px;">
                 <button class="btn btn-link text-white sidebar-toggle-btn" id="sidebarToggle" style="margin: 0;">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
-            <a class="navbar-brand d-flex align-items-center mb-0 ms-3" href="{{ route('dashboard') }}">
+            <a class="navbar-brand d-flex align-items-center mb-0 ms-2" href="{{ route('dashboard') }}">
                 <img src="{{ !empty($systemLogo) ? asset($systemLogo) : asset('images/bc-logo.png') }}" alt="Logo" class="navbar-logo-image me-2">
                 <span class="brand-text">{{ \App\Models\Setting::get('app_name', config('app.name', 'Clothing Outlet POS')) }}</span>
             </a>
         </div>
 
+        @if(request()->routeIs('pos.*') || request()->is('pos*'))
+        <!-- Center Group: Wide Search Bar + Amber Add Button -->
+        <div class="topbar-search-cluster d-none d-md-flex">
+            <div class="billing-search-wrap">
+                <i class="fas fa-barcode"></i>
+                <input type="text" id="product-search" placeholder="Enter Product name / SKU / Scan bar code" autocomplete="off" onfocus="handleSearchDropdown()" onblur="setTimeout(() => { document.getElementById('product-search-dropdown').style.display = 'none'; }, 200)">
+                <div id="product-search-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; margin-top:4px; z-index:1000; flex-direction:column; max-height:400px; overflow-y:auto;">
+                </div>
+            </div>
+            <button class="billing-add-btn" title="Add custom item" data-bs-toggle="modal" data-bs-target="#quickAddProductModal"><i class="fas fa-plus"></i></button>
+        </div>
+        @endif
+
         <!-- Right Side Items -->
-        <div class="d-flex align-items-center navbar-right-items">
+        <div class="d-flex align-items-center navbar-right-items ms-auto">
             <!-- Notifications -->
             <div class="dropdown me-2 me-md-3">
                 <button class="btn btn-link text-white position-relative nav-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">

@@ -1,150 +1,57 @@
 {{-- ============================================
-POS Billing Page - Full-Screen, No Sidebar
-Matches reference UI photo exactly
+POS Billing Page - Lumen Terminal Modern Layout
+Matches DESIGN.md + Stitch Terminal Mockup
 ============================================ --}}
 @extends('layouts.pos-billing')
 @section('title', 'POS Billing')
 
-{{-- ============ MAIN CONTENT (LEFT + RIGHT PANELS) ============ --}}
+{{-- ============ MAIN CONTENT (CENTER PRODUCT PANEL + RIGHT CART PANEL) ============ --}}
 @section('content')
 
-    <!-- ===== LEFT BILLING PANEL ===== -->
-    <div id="pos-billing">
-
-        <!-- Top bar: Customer selector + Search -->
-        <div id="billing-topbar">
-
-            <div class="customer-selector" data-bs-toggle="modal" data-bs-target="#customerSelectModal" id="pos-customer-btn" style="display:flex; align-items:center; gap:10px; padding:0 16px; min-width:260px; height:50px; box-sizing:border-box;">
-                <i class="fas fa-user" style="color:#1f2937;font-size:1rem;"></i>
-                <div style="display:flex; flex-direction:column; line-height:1.2; text-align:left;">
-                    <span id="pos-customer-name" style="font-weight:700; color:#1f2937; font-size:0.85rem;">Customer Details</span>
-                    <span id="pos-customer-sub" style="font-size:0.7rem; color:#9ca3af;">Add customer name & phone</span>
-                </div>
-                <i class="fas fa-caret-down" style="font-size:0.7rem;color:#9ca3af; margin-left:auto;"></i>
-            </div>
-            <div class="billing-search-wrap" style="position:relative;">
-                <i class="fas fa-search"></i>
-                <input type="text" id="product-search" placeholder="Enter Product name / SKU / Scan bar code" autocomplete="off" onfocus="handleSearchDropdown()" onblur="setTimeout(() => { document.getElementById('product-search-dropdown').style.display = 'none'; }, 200)">
-                <div id="product-search-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-top:4px; box-shadow:0 10px 25px rgba(0,0,0,0.1); z-index:1000; flex-direction:column; max-height:400px; overflow-y:auto;">
-                </div>
-            </div>
-            <button class="billing-add-btn" title="Add custom item" data-bs-toggle="modal" data-bs-target="#quickAddProductModal"><i class="fas fa-plus"></i></button>
-        </div>
-
-        <!-- Cart Table -->
-        <div id="billing-table-wrap">
-            <table id="cart-table">
-                <thead>
-                    <tr>
-                        <th>Product <i class="fas fa-info-circle" style="font-size:0.65rem;color:#d1d5db;"></i></th>
-                        <th style="text-align:center;">Quantity</th>
-                        <th style="text-align:right;">Subtotal</th>
-                        <th style="width:36px;text-align:center;"><i class="fas fa-times" style="color:#ef4444;"></i></th>
-                    </tr>
-                </thead>
-                <tbody id="cart-items">
-                    <tr id="empty-cart-row">
-                        <td colspan="4">
-                            <i class="fas fa-shopping-basket"></i>
-                            <div style="font-size:1.1rem;font-weight:600;margin-bottom:6px;color:#6b7280;">Cart is empty</div>
-                            <small>Search and add products to start billing</small>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Billing Footer -->
-        <div id="billing-footer">
-            <div class="billing-footer-row">
-                <label>Items: <strong id="cart-count">0</strong></label>
-                <span style="flex:1;"></span>
-                <label>Total: <strong id="subtotal" style="color:#d4891a;">0</strong></label>
-            </div>
-            <div class="billing-footer-row">
-                <label>
-                    <i class="fas fa-tag" style="color:#9ca3af;margin-right:3px;"></i>
-                    Discount <i class="fas fa-info-circle" style="color:#d1d5db;font-size:0.65rem;"></i>
-                    <i class="fas fa-edit" style="color:#9ca3af;font-size:0.65rem;margin-left:3px;"></i>
-                    (-):
-                </label>
-                <select id="discount-type" onchange="applyDiscount()" style="width:80px;">
-                    <option value="">None</option>
-                    <option value="percentage">%</option>
-                    <option value="fixed">Rs.</option>
-                </select>
-                <input type="number" id="discount-value" placeholder="0" min="0" step="0.01"
-                    oninput="applyDiscount()" style="width:80px;">
-                <div id="discount-display" style="display:none;">
-                    <small style="color:#ef4444;font-weight:600;">-<span id="discount-amount-text">0</span></small>
-                </div>
-                <span style="flex:1;"></span>
-                <label>
-                    Shipping(+):
-                    <i class="fas fa-info-circle" style="color:#d1d5db;font-size:0.65rem;"></i>
-                    <i class="fas fa-edit" style="color:#9ca3af;font-size:0.65rem;margin-left:3px;"></i>
-                </label>
-                <input type="number" id="shipping-value" placeholder="0" min="0" step="0.01"
-                    oninput="applyDiscount()" style="width:80px;">
-            </div>
-
-            <!-- Applied gift card redemption (full card value, committed at checkout) -->
-            <div class="billing-footer-row" id="giftcard-redeem-row" style="display:none;">
-                <label>
-                    <i class="fas fa-gift" style="color:#be185d;margin-right:3px;"></i>
-                    Gift Card <span id="gc-row-number" style="color:#6b7280;font-weight:600;"></span> (-):
-                </label>
-                <small style="color:#be185d;font-weight:700;">-<span id="gc-row-amount">0</span></small>
-                <button onclick="removeGiftCardRedemption()" title="Remove gift card"
-                    style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 6px;">
-                    <i class="fas fa-times"></i>
-                </button>
-                <span style="flex:1;"></span>
-            </div>
-
-            <div id="billing-notes">
-                <textarea id="customer-notes" rows="1" placeholder="Customer notes (optional)..."></textarea>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== RIGHT CATALOGUE PANEL (Hidden to retain barcode functionality in DOM) ===== -->
-    <div id="pos-catalogue" style="display: none !important;">
+    <!-- ===== CENTER PANEL (Product Catalogue / Search Tile Grid) ===== -->
+    <div id="pos-center-panel">
+        
+        <!-- Category & Source Filter Header (Single Consolidated Row) -->
         <div id="catalogue-header">
-            <!-- Source filter buttons -->
-            <div class="cat-filter-row">
-                <button class="cat-pill active" id="btn-local-only" onclick="setSourceFilter('local', this)">
-                    <i class="fas fa-store" style="margin-right:3px;"></i>Local Only
-                </button>
-                <button class="cat-pill" id="btn-all-products" onclick="setSourceFilter('all', this)">
-                    <i class="fas fa-globe" style="margin-right:3px;"></i>All Products
-                </button>
-                <div style="flex:1;"></div>
-                <div style="display:flex;align-items:center;background:#f3f4f6;border:1px solid #e0e0e0;border-radius:8px;padding:3px 8px;gap:5px;">
-                    <i class="fas fa-search" style="color:#9ca3af;font-size:0.7rem;"></i>
-                    <input type="text" id="catalogue-search" placeholder="Search..." oninput="filterProducts()"
-                        style="border:none;background:transparent;outline:none;font-size:0.72rem;color:#374151;width:80px;">
+            <div class="catalogue-filter-bar">
+                <!-- Source filter buttons (Segmented Control) -->
+                <div class="source-segmented-control">
+                    <button class="source-toggle-btn active" id="btn-local-only" onclick="setSourceFilter('local', this)">
+                        <i class="fas fa-store me-1"></i>Local Only
+                    </button>
+                    <button class="source-toggle-btn" id="btn-all-products" onclick="setSourceFilter('all', this)">
+                        <i class="fas fa-globe me-1"></i>All Products
+                    </button>
                 </div>
-            </div>
 
-            <!-- Local Category Pills -->
-            <div id="local-category-pills-wrap" class="cat-pills">
-                <button class="cat-pill active" data-category="" onclick="selectCategory(this)">All</button>
-                @foreach($localCategories as $cat)
-                    <button class="cat-pill" data-category="{{ $cat }}" onclick="selectCategory(this)">{{ $cat }}</button>
-                @endforeach
-            </div>
+                <!-- Category Chips (Horizontally Scrollable) -->
+                <div class="cat-chips-scroll-area">
+                    <!-- Local Category Chips -->
+                    <div id="local-category-pills-wrap" class="cat-pills">
+                        <button class="cat-pill active" data-category="" onclick="selectCategory(this)">All</button>
+                        @foreach($localCategories as $cat)
+                            <button class="cat-pill" data-category="{{ $cat }}" onclick="selectCategory(this)">{{ $cat }}</button>
+                        @endforeach
+                    </div>
 
-            <!-- Shopify Collection Pills -->
-            <div id="shopify-collection-pills-wrap" class="cat-pills" style="display:none;">
-                <button class="cat-pill active" data-collection="" onclick="selectCollection(this)">All</button>
-                @foreach($collections as $col)
-                    <button class="cat-pill" data-collection="{{ $col->id }}" onclick="selectCollection(this)">{{ $col->title }}</button>
-                @endforeach
+                    <!-- Shopify Collection Chips -->
+                    <div id="shopify-collection-pills-wrap" class="cat-pills" style="display:none;">
+                        <button class="cat-pill active" data-collection="" onclick="selectCollection(this)">All</button>
+                        @foreach($collections as $col)
+                            <button class="cat-pill" data-collection="{{ $col->id }}" onclick="selectCollection(this)">{{ $col->title }}</button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Filter Search Input (Right Aligned) -->
+                <div class="catalogue-search-box ms-auto">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="catalogue-search" placeholder="Filter..." oninput="filterProducts()">
+                </div>
             </div>
         </div>
 
-        <!-- Product Grid -->
+        <!-- Product Tiles Grid Container -->
         <div id="catalogue-grid-wrap">
             <div id="product-grid">
                 @forelse($products as $product)
@@ -178,7 +85,14 @@ Matches reference UI photo exactly
                             data-image="{{ $product->image_url ?? '' }}"
                             data-variants='@json($variantData)'
                             onclick="handleProductClick(this)">
+                            
                             <div class="prod-img">
+                                @if($product->stock > 0)
+                                    <span class="prod-stock-badge">{{ $product->stock }} IN STOCK</span>
+                                @else
+                                    <span class="prod-stock-badge" style="color:var(--color-error);border-color:var(--color-error-container);">OUT OF STOCK</span>
+                                @endif
+                                
                                 @if($product->image_url)
                                     <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
                                 @else
@@ -187,7 +101,8 @@ Matches reference UI photo exactly
                             </div>
                             <div class="prod-info">
                                 <div class="prod-name" title="{{ $product->name }}">{{ $product->name }}</div>
-                                <div class="prod-sku">({{ $product->sku ?? 'N/A' }})</div>
+                                <div class="prod-sku">{{ $product->sku ?? 'N/A' }}</div>
+                                <div class="prod-price-tag">Rs. {{ number_format($product->price, 2) }}</div>
                             </div>
                         </div>
                     </div>
@@ -214,10 +129,14 @@ Matches reference UI photo exactly
                             <div class="prod-card" data-id="{{ $p['id'] }}" data-name="{{ $p['name'] }}"
                                 data-price="{{ $p['price'] }}" data-stock="{{ $p['stock'] }}" data-sku="{{ $p['sku'] }}"
                                 data-variants='[]' onclick="addToCart(this)">
-                                <div class="prod-img"><i class="fas fa-tshirt"></i></div>
+                                <div class="prod-img">
+                                    <span class="prod-stock-badge">{{ $p['stock'] }} IN STOCK</span>
+                                    <i class="fas fa-tshirt"></i>
+                                </div>
                                 <div class="prod-info">
                                     <div class="prod-name">{{ $p['name'] }}</div>
-                                    <div class="prod-sku">({{ $p['sku'] }})</div>
+                                    <div class="prod-sku">{{ $p['sku'] }}</div>
+                                    <div class="prod-price-tag">Rs. {{ number_format($p['price'], 2) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -225,10 +144,154 @@ Matches reference UI photo exactly
                 @endforelse
 
                 <div id="no-results" style="display:none;">
-                    <i class="fas fa-search" style="font-size:1.5rem;margin-bottom:8px;"></i>
+                    <i class="fas fa-search" style="font-size:1.8rem;margin-bottom:8px;color:var(--color-outline);"></i>
                     <div>No products found</div>
                 </div>
             </div>
+        </div>
+
+        <!-- Center Panel Bottom Pagination Bar -->
+        <div id="catalogue-pagination">
+            <button class="page-btn" title="Previous Page"><i class="fas fa-chevron-left"></i></button>
+            <span>PAGE 1 OF 1</span>
+            <button class="page-btn" title="Next Page"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT CART PANEL (~38% Width) ===== -->
+    <div id="pos-cart-panel">
+
+        <!-- Cart Panel Header: Current Bill # + Scanned Count + Delete All -->
+        <div id="cart-panel-header">
+            <div class="current-bill-info">
+                <h4 class="current-bill-title">
+                    Current Bill #<span id="pos-bill-number">{{ $nextBillNo ?? '1042' }}</span>
+                </h4>
+                <div class="current-bill-subtitle">
+                    <span id="cart-count">0</span> Items Scanned
+                </div>
+                <div id="pos-customer-tag" class="customer-badge-tag" style="display:none;">
+                    <i class="fas fa-user-check"></i>
+                    <span id="pos-customer-name">Customer</span>
+                    <button type="button" onclick="clearCustomer(event)" title="Remove Customer">&times;</button>
+                </div>
+            </div>
+            
+            <button id="btn-clear-cart-header" onclick="clearCart()" title="Clear / Void Cart">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+
+        <!-- Cart Line-Items List -->
+        <div id="billing-table-wrap">
+            <div id="cart-items">
+                <div class="empty-cart-state" id="empty-cart-row">
+                    <i class="fas fa-shopping-basket"></i>
+                    <div class="empty-title">Cart is empty</div>
+                    <div class="empty-sub">Search and add products to start billing</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Totals Summary Breakdown Section -->
+        <div id="billing-summary-section">
+            <div class="summary-item-row">
+                <span class="summary-lbl">Subtotal</span>
+                <span class="summary-val" id="subtotal">0.00</span>
+            </div>
+            
+            <div class="summary-item-row">
+                <span class="summary-lbl">Item Discount</span>
+                <span class="summary-val text-muted" id="item-discount-display">-0.00</span>
+            </div>
+
+            <div class="summary-item-row clickable-row" onclick="openDiscountModal()" title="Click to edit Bill Discount">
+                <span class="summary-lbl">
+                    Bill Discount <i class="fas fa-edit" style="font-size:0.7rem;color:#f5a524;opacity:0.7;margin-left:4px;"></i>
+                </span>
+                <span class="summary-val text-warning" id="bill-discount-display">-0.00</span>
+            </div>
+
+            <div class="summary-item-row" id="shipping-tax-row">
+                <span class="summary-lbl">GST/Tax (10%)</span>
+                <span class="summary-val" id="shipping-tax-display">0.00</span>
+            </div>
+
+            <!-- Applied Gift Card Redemption -->
+            <div class="summary-item-row text-warning" id="giftcard-redeem-row" style="display:none;">
+                <span class="summary-lbl">
+                    <i class="fas fa-gift me-1"></i> Gift Card <span id="gc-row-number" style="font-weight:600;"></span> (-):
+                </span>
+                <span class="summary-val">
+                    -<span id="gc-row-amount">0.00</span>
+                    <button onclick="removeGiftCardRedemption()" class="btn-gc-del" title="Remove Gift Card">&times;</button>
+                </span>
+            </div>
+        </div>
+
+        <!-- Hidden Inputs for backwards-compatibility -->
+        <div style="display:none;">
+            <select id="discount-type">
+                <option value="">None</option>
+                <option value="percentage">%</option>
+                <option value="fixed">Rs.</option>
+            </select>
+            <input type="number" id="discount-value" value="0">
+            <input type="number" id="shipping-value" value="0">
+            <textarea id="customer-notes"></textarea>
+            <span id="discount-amount-text">0</span>
+            <div id="discount-display"></div>
+            <span id="pos-customer-sub"></span>
+            <button id="checkout-btn" disabled onclick="checkout()"></button>
+            <button id="pay-btn-giftcard" disabled onclick="openGiftCardRedeemModal()"></button>
+            <button class="paybar-btn" id="pay-btn-multipay" onclick="selectPaymentBar('multipay', this)"></button>
+            <button class="paybar-btn" id="pay-btn-koko" onclick="selectPaymentBar('koko', this)"></button>
+            <button class="paybar-btn" id="pay-btn-mintpay" onclick="selectPaymentBar('mintpay', this)"></button>
+            <button class="paybar-btn" id="pay-btn-payzy" onclick="selectPaymentBar('payzy', this)"></button>
+            <button class="paybar-btn" id="pay-btn-bank" onclick="selectPaymentBar('bank', this)"></button>
+        </div>
+
+        <!-- Grand Total Row -->
+        <div id="cart-grand-total-wrap">
+            <span class="grand-total-label">GRAND TOTAL</span>
+            <span class="grand-total-amount" id="total">0.00</span>
+        </div>
+
+        <!-- 4 Action Buttons Bar (HOLD, DISCOUNT, CUSTOMER, VOID) -->
+        <div class="pos-action-grid">
+            <button type="button" class="action-grid-btn" id="btn-action-hold" onclick="handleHoldOrder()" title="Hold / Park Order">
+                <i class="far fa-pause-circle"></i>
+                <span>HOLD</span>
+                <span class="held-badge" id="held-orders-badge" style="display:none;">0</span>
+            </button>
+            <button type="button" class="action-grid-btn" id="btn-action-discount" onclick="openDiscountModal()" title="Add Bill Discount">
+                <i class="fas fa-tag"></i>
+                <span>DISCOUNT</span>
+            </button>
+            <button type="button" class="action-grid-btn" id="btn-action-customer" data-bs-toggle="modal" data-bs-target="#customerSelectModal" title="Select Customer">
+                <i class="far fa-user"></i>
+                <span id="btn-customer-label">CUSTOMER</span>
+            </button>
+            <button type="button" class="action-grid-btn btn-action-void" id="btn-action-void" onclick="clearCart()" title="Void Order">
+                <i class="fas fa-ban"></i>
+                <span>VOID</span>
+            </button>
+        </div>
+
+        <!-- Bottom Payment Bar (CASH, CARD, UPI/QR) -->
+        <div class="pos-bottom-paybar">
+            <button type="button" class="pay-main-btn pay-btn-cash paybar-btn" id="pay-btn-cash" onclick="selectPaymentBar('cash', this)">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>CASH</span>
+            </button>
+            <button type="button" class="pay-main-btn pay-btn-card paybar-btn" id="pay-btn-card" onclick="selectPaymentBar('card', this)">
+                <i class="fas fa-credit-card"></i>
+                <span>CARD</span>
+            </button>
+            <button type="button" class="pay-main-btn pay-btn-qr paybar-btn" id="pay-btn-qr" onclick="openOtherPaymentModal()">
+                <i class="fas fa-qrcode"></i>
+                <span>UPI / QR</span>
+            </button>
         </div>
     </div>
 
@@ -766,54 +829,9 @@ Matches reference UI photo exactly
     <!-- Print iframe -->
     <iframe id="print-frame" src="" style="display:none;width:0;height:0;border:none;" tabindex="-1" aria-hidden="true"></iframe>
 
-{{-- ============ BOTTOM PAYMENT BAR ============ --}}
+{{-- ============ BOTTOM PAYMENT BAR (Now integrated in Right Cart Panel) ============ --}}
 @section('paybar')
-<div id="pos-paybar">
-    <button class="paybar-btn pb-blue" id="pay-btn-card" onclick="selectPaymentBar('card', this)">
-        <i class="fas fa-credit-card"></i> Card
-    </button>
-    <button class="paybar-btn pb-multi" id="pay-btn-multipay" onclick="selectPaymentBar('multipay', this)">
-        <i class="fas fa-layer-group"></i> Multiple Pay
-    </button>
-    <button class="paybar-btn pb-purple" id="pay-btn-koko" onclick="selectPaymentBar('koko', this)">
-        <i class="fas fa-mobile-alt"></i> Koko
-    </button>
-    <button class="paybar-btn pb-teal" id="pay-btn-mintpay" onclick="selectPaymentBar('mintpay', this)">
-        <i class="fas fa-leaf"></i> Mintpay
-    </button>
-    <button class="paybar-btn pb-indigo" id="pay-btn-payzy" onclick="selectPaymentBar('payzy', this)">
-        <i class="fas fa-bolt"></i> Payzy
-    </button>
-    <button class="paybar-btn pb-green" id="pay-btn-cash" onclick="selectPaymentBar('cash', this)">
-        <i class="fas fa-money-bill-wave"></i> Cash
-    </button>
-    <button class="paybar-btn pb-navy" id="pay-btn-bank" onclick="selectPaymentBar('bank', this)">
-        <i class="fas fa-university"></i> Bank Transfer
-    </button>
-    <button class="paybar-btn" id="pay-btn-giftcard" style="background:#be185d;" onclick="openGiftCardRedeemModal()" disabled>
-        <i class="fas fa-gift"></i> Redeem Gift Card
-    </button>
-    <button class="paybar-btn pb-gray" onclick="clearCart()">
-        <i class="fas fa-times"></i> Cancel
-    </button>
-
-    <!-- Total Payable -->
-    <div class="paybar-total">
-        <div class="paybar-total-label">Total<br>Payable</div>
-        <div class="paybar-total-value" id="total">0</div>
-    </div>
-
-    <div class="paybar-spacer"></div>
-
-    <!-- Checkout -->
-    <button id="checkout-btn" class="paybar-btn pb-gold" disabled onclick="checkout()">
-        <i class="fas fa-check-circle"></i> Checkout
-    </button>
-
-    <button class="paybar-btn pb-sky" onclick="showRecentTransactions()">
-        <i class="fas fa-history"></i> Recent Transactions
-    </button>
-</div>
+@endsection
 
 <!-- Customer Selection Modal -->
 <div class="modal fade" id="customerSelectModal" tabindex="-1">
@@ -850,6 +868,145 @@ Matches reference UI photo exactly
             <div class="modal-footer" style="padding:0.75rem 1.5rem;background:#fafafa;border-radius:0 0 12px 12px;border-top:1px solid #f3f4f6;">
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearCustomer()">Clear / Walk-In</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Discount Modal -->
+<div class="modal fade" id="discountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border:none;border-radius:12px;background:#171a22;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid #282f3d;">
+            <div class="modal-header" style="background:#111317;border-bottom:1px solid #282f3d;padding:1rem 1.25rem;">
+                <h5 class="modal-title" style="font-size:1rem;font-weight:700;color:#f8fafc;">
+                    <i class="fas fa-tag me-2" style="color:#f5a524;"></i>Bill Discount
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="d-flex gap-2 mb-3">
+                    <button type="button" id="modal-disc-type-pct" class="btn btn-sm flex-fill" onclick="setDiscountModalType('percentage')" style="background:#f5a524;color:#111317;font-weight:700;border:none;">Percentage (%)</button>
+                    <button type="button" id="modal-disc-type-fix" class="btn btn-sm flex-fill" onclick="setDiscountModalType('fixed')" style="background:#282f3d;color:#cbd5e1;font-weight:700;border:none;">Fixed Amount (Rs.)</button>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Discount Value</label>
+                    <div class="input-group">
+                        <span class="input-group-text" id="modal-disc-unit" style="background:#111317;border-color:#282f3d;color:#f5a524;font-weight:700;">%</span>
+                        <input type="number" id="modal-discount-input" class="form-control" placeholder="0" min="0" step="0.01" style="background:#111317;border-color:#282f3d;color:#fff;font-weight:700;font-size:1.1rem;" oninput="previewModalDiscount()">
+                    </div>
+                </div>
+
+                <!-- Quick Presets for % -->
+                <div id="modal-pct-presets" class="d-flex gap-1 mb-3">
+                    <button type="button" class="btn btn-xs flex-fill" style="background:#282f3d;color:#f1f5f9;font-size:0.75rem;padding:4px;" onclick="applyDiscountPreset(5)">5%</button>
+                    <button type="button" class="btn btn-xs flex-fill" style="background:#282f3d;color:#f1f5f9;font-size:0.75rem;padding:4px;" onclick="applyDiscountPreset(10)">10%</button>
+                    <button type="button" class="btn btn-xs flex-fill" style="background:#282f3d;color:#f1f5f9;font-size:0.75rem;padding:4px;" onclick="applyDiscountPreset(15)">15%</button>
+                    <button type="button" class="btn btn-xs flex-fill" style="background:#282f3d;color:#f1f5f9;font-size:0.75rem;padding:4px;" onclick="applyDiscountPreset(20)">20%</button>
+                </div>
+
+                <div class="p-2 rounded mb-3" style="background:#111317;border:1px solid #282f3d;">
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>Discounted Total:</span>
+                        <span id="modal-disc-preview" style="color:#f5a524;font-weight:700;">Rs. 0.00</span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm flex-fill" onclick="removeDiscountModal()">Remove</button>
+                    <button type="button" class="btn btn-warning btn-sm flex-fill" style="background:#f5a524;color:#111317;font-weight:700;border:none;" onclick="saveDiscountModal()">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Other Payments & Split Modal -->
+<div class="modal fade" id="otherPaymentsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border:none;border-radius:12px;background:#171a22;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid #282f3d;">
+            <div class="modal-header" style="background:#111317;border-bottom:1px solid #282f3d;padding:1rem 1.25rem;">
+                <h5 class="modal-title" style="font-size:1rem;font-weight:700;color:#f8fafc;">
+                    <i class="fas fa-wallet me-2" style="color:#f5a524;"></i>Other Payment Methods
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn w-100 p-3 text-start d-flex align-items-center gap-3" style="background:#111317;border:1px solid #282f3d;color:#fff;border-radius:8px;" onclick="chooseOtherPayMethod('multipay')">
+                            <div style="width:36px;height:36px;border-radius:8px;background:rgba(59,130,246,0.15);color:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:1.1rem;"><i class="fas fa-layer-group"></i></div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.85rem;">Split Payment</div>
+                                <small style="color:#94a3b8;font-size:0.7rem;">Multiple methods</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn w-100 p-3 text-start d-flex align-items-center gap-3" style="background:#111317;border:1px solid #282f3d;color:#fff;border-radius:8px;" onclick="chooseOtherPayMethod('koko')">
+                            <div style="width:36px;height:36px;border-radius:8px;background:rgba(139,92,246,0.15);color:#8b5cf6;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;">K</div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.85rem;">Koko</div>
+                                <small style="color:#94a3b8;font-size:0.7rem;">Buy now pay later</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn w-100 p-3 text-start d-flex align-items-center gap-3" style="background:#111317;border:1px solid #282f3d;color:#fff;border-radius:8px;" onclick="chooseOtherPayMethod('mintpay')">
+                            <div style="width:36px;height:36px;border-radius:8px;background:rgba(14,165,233,0.15);color:#0ea5e9;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;">M</div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.85rem;">Mintpay</div>
+                                <small style="color:#94a3b8;font-size:0.7rem;">Installment plan</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn w-100 p-3 text-start d-flex align-items-center gap-3" style="background:#111317;border:1px solid #282f3d;color:#fff;border-radius:8px;" onclick="chooseOtherPayMethod('bank')">
+                            <div style="width:36px;height:36px;border-radius:8px;background:rgba(100,116,139,0.15);color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:1.1rem;"><i class="fas fa-university"></i></div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.85rem;">Bank Transfer</div>
+                                <small style="color:#94a3b8;font-size:0.7rem;">Direct deposit</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn w-100 p-3 text-start d-flex align-items-center gap-3" style="background:#111317;border:1px solid #282f3d;color:#fff;border-radius:8px;" onclick="chooseOtherPayMethod('payzy')">
+                            <div style="width:36px;height:36px;border-radius:8px;background:rgba(244,63,94,0.15);color:#f43f5e;display:flex;align-items:center;justify-content:center;font-size:1.1rem;"><i class="fas fa-bolt"></i></div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.85rem;">Payzy</div>
+                                <small style="color:#94a3b8;font-size:0.7rem;">Digital payment</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn w-100 p-3 text-start d-flex align-items-center gap-3" style="background:#111317;border:1px solid #282f3d;color:#fff;border-radius:8px;" onclick="chooseOtherPayMethod('giftcard')">
+                            <div style="width:36px;height:36px;border-radius:8px;background:rgba(245,165,36,0.15);color:#f5a524;display:flex;align-items:center;justify-content:center;font-size:1.1rem;"><i class="fas fa-gift"></i></div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.85rem;">Gift Card</div>
+                                <small style="color:#94a3b8;font-size:0.7rem;">Redeem voucher</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Held Orders Modal -->
+<div class="modal fade" id="heldOrdersModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border:none;border-radius:12px;background:#171a22;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid #282f3d;">
+            <div class="modal-header" style="background:#111317;border-bottom:1px solid #282f3d;padding:1rem 1.25rem;">
+                <h5 class="modal-title" style="font-size:1rem;font-weight:700;color:#f8fafc;">
+                    <i class="far fa-pause-circle me-2" style="color:#f5a524;"></i>Parked / Held Orders
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="held-orders-list">
+                    <!-- Injected in JS -->
+                </div>
             </div>
         </div>
     </div>
@@ -1163,7 +1320,7 @@ Matches reference UI photo exactly
     // ---- Source Filter ----
     function setSourceFilter(source, btn) {
         activeSource = source;
-        document.querySelectorAll('#catalogue-header .cat-pill[id]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#catalogue-header .source-toggle-btn, #catalogue-header .cat-pill[id]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         if (source === 'all') {
             document.getElementById('local-category-pills-wrap').style.display = 'none';
@@ -1342,7 +1499,7 @@ Matches reference UI photo exactly
         renderCart();
     }
 
-    // ---- Render Cart (table rows) ----
+    // ---- Render Cart (Item Cards List) ----
     function renderCart() {
         // Every cart mutation (add / qty / remove / price / gift card) funnels
         // through here, so this is where a changed cart becomes a NEW purchase
@@ -1351,68 +1508,59 @@ Matches reference UI photo exactly
         const tbody = document.getElementById('cart-items');
 
         if (cart.length === 0) {
-            tbody.innerHTML = `<tr id="empty-cart-row">
-                <td colspan="4">
-                    <i class="fas fa-shopping-basket"></i>
-                    <div style="font-size:1.1rem;font-weight:600;margin-bottom:6px;color:#6b7280;">Cart is empty</div>
-                    <small>Search and add products to start billing</small>
-                </td>
-            </tr>`;
+            tbody.innerHTML = `<div class="empty-cart-state" id="empty-cart-row">
+                <i class="fas fa-shopping-basket"></i>
+                <div class="empty-title">Cart is empty</div>
+                <div class="empty-sub">Search and add products to start billing</div>
+            </div>`;
         } else {
             tbody.innerHTML = cart.map((item, idx) => {
                 const vbadge = [item.color, item.size].filter(Boolean).join(' / ');
                 const ek = item.cartKey.replace(/'/g, "\\'");
-                const bg = idx % 2 === 0 ? '#fff' : '#fafafa';
                 if (item.giftCard) {
-                    // Pre-bound physical gift card being SOLD: fixed qty 1, fixed
-                    // price (= card value); becomes 'sold' only when checkout commits.
-                    return `<tr style="background:${bg};">
-                        <td>
-                            <div style="font-weight:600;color:#1f2937;font-size:0.82rem;">
-                                <i class="fas fa-gift" style="color:#be185d;margin-right:4px;"></i>${item.name}
-                                <span style="background:#fce7f3;border:1px solid #fbcfe8;border-radius:10px;padding:1px 6px;font-size:0.65rem;color:#be185d;">GIFT CARD</span>
-                            </div>
-                            <div style="font-size:0.72rem;color:#9ca3af;margin-top:2px;">Card No: ${item.cardNumber}</div>
-                        </td>
-                        <td style="text-align:center;font-weight:700;">1</td>
-                        <td style="text-align:right;font-weight:700;color:#d4891a;">Rs. ${(item.price).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
-                        <td style="text-align:center;">
-                            <button onclick="removeFromCart('${ek}')" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:0.9rem;padding:2px 6px;border-radius:4px;" title="Remove (card stays available)"><i class="fas fa-times"></i></button>
-                        </td>
-                    </tr>`;
+                    return `<div class="cart-item-card">
+                        <div class="cart-item-left">
+                            <div class="cart-item-name"><i class="fas fa-gift text-warning me-1"></i>${item.name}</div>
+                            <div class="cart-item-meta">Card No: ${item.cardNumber} • <span style="color:#f5a524;font-weight:700;">GIFT CARD</span></div>
+                            <div class="cart-item-unit-price">@ Rs. ${(item.price).toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+                        </div>
+                        <div class="cart-item-right">
+                            <div class="cart-stepper"><span style="min-width:32px;">1</span></div>
+                            <div class="cart-item-subtotal">Rs. ${(item.price).toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+                            <button type="button" class="cart-item-remove-btn" onclick="removeFromCart('${ek}')" title="Remove gift card"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>`;
                 }
-                return `<tr style="background:${bg};">
-                    <td>
-                        <div style="font-weight:600;color:#1f2937;font-size:0.82rem;">${item.name}${vbadge ? ` <span style="background:#f3f4f6;border:1px solid #e0e0e0;border-radius:10px;padding:1px 6px;font-size:0.65rem;color:#6b7280;">${vbadge}</span>` : ''}</div>
-                        <div style="font-size:0.72rem;color:#9ca3af;display:flex;align-items:center;gap:3px;margin-top:2px;">
-                            SKU: ${item.sku} &nbsp;|&nbsp; Rs. 
+                return `<div class="cart-item-card">
+                    <div class="cart-item-left">
+                        <div class="cart-item-name" title="${item.name}">${item.name}</div>
+                        <div class="cart-item-meta">${vbadge ? vbadge + ' • ' : ''}SKU: ${item.sku}</div>
+                        <div class="cart-item-unit-price">
+                            @ Rs. 
                             <input type="number" value="${item.price}" min="0" step="0.01" 
                                 onchange="updateItemPrice('${ek}', this.value)" 
-                                style="width: 75px; border: 1px solid transparent; background: transparent; color: #6b7280; font-size: 0.72rem; outline: none; padding: 1px 4px; border-radius: 4px; transition: all 0.2s; -moz-appearance: textfield;"
-                                onfocus="this.style.borderColor='#d4891a'; this.style.background='#fff'; this.style.color='#1f2937';"
-                                onblur="this.style.borderColor='transparent'; this.style.background='transparent'; this.style.color='#6b7280';"
-                                title="Edit Price"
+                                style="width: 75px; border: 1px solid transparent; background: transparent; color: #f5a524; font-size: 0.76rem; font-weight:700; outline: none; padding: 1px 4px; border-radius: 4px; transition: all 0.15s;"
+                                onfocus="this.style.borderColor='#f5a524'; this.style.background='#171a22';"
+                                onblur="this.style.borderColor='transparent'; this.style.background='transparent';"
+                                title="Click to edit unit price"
                             >
-                            <i class="fas fa-pencil-alt" style="font-size: 0.6rem; opacity: 0.5;"></i>
                         </div>
-                    </td>
-                    <td style="text-align:center;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                            <button onclick="updateQty('${ek}',-1)" style="width:22px;height:22px;border:1px solid #e0e0e0;border-radius:5px;background:#fff;cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center;"><i class="fas fa-minus"></i></button>
-                            <span style="font-weight:700;min-width:20px;text-align:center;">${item.quantity}</span>
-                            <button onclick="updateQty('${ek}',1)" style="width:22px;height:22px;border:1px solid #e0e0e0;border-radius:5px;background:#fff;cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center;"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="cart-item-right">
+                        <div class="cart-stepper">
+                            <button type="button" onclick="updateQty('${ek}',-1)"><i class="fas fa-minus"></i></button>
+                            <span>${item.quantity}</span>
+                            <button type="button" onclick="updateQty('${ek}',1)"><i class="fas fa-plus"></i></button>
                         </div>
-                    </td>
-                    <td style="text-align:right;font-weight:700;color:#d4891a;">Rs. ${(item.price*item.quantity).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center;">
-                        <button onclick="removeFromCart('${ek}')" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:0.9rem;padding:2px 6px;border-radius:4px;" title="Remove"><i class="fas fa-times"></i></button>
-                    </td>
-                </tr>`;
+                        <div class="cart-item-subtotal">Rs. ${(item.price*item.quantity).toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+                        <button type="button" class="cart-item-remove-btn" onclick="removeFromCart('${ek}')" title="Remove item"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>`;
             }).join('');
         }
 
         const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-        document.getElementById('subtotal').textContent = sub.toLocaleString('en-US', {minimumFractionDigits:2});
+        document.getElementById('subtotal').textContent = 'Rs. ' + sub.toLocaleString('en-US', {minimumFractionDigits:2});
         document.getElementById('cart-count').textContent = cart.reduce((s, i) => s + i.quantity, 0);
         applyDiscount();
         updateCheckoutBtn();
@@ -1628,7 +1776,7 @@ Matches reference UI photo exactly
 
         if (!type || val <= 0) {
             discountAmount = 0;
-            display.style.display = 'none';
+            if (display) display.style.display = 'none';
         } else {
             if (type === 'percentage') {
                 discountAmount = (sub * Math.min(val, 100)) / 100;
@@ -1637,13 +1785,28 @@ Matches reference UI photo exactly
             }
             discountAmount = Math.max(0, discountAmount);
             if (discountAmount > 0) {
-                display.style.display = 'inline';
-                document.getElementById('discount-amount-text').textContent =
-                    discountAmount.toLocaleString('en-US', {minimumFractionDigits:2}) +
-                    (type === 'percentage' ? ` (${val}%)` : '');
+                if (display) display.style.display = 'inline';
+                const discText = document.getElementById('discount-amount-text');
+                if (discText) {
+                    discText.textContent = discountAmount.toLocaleString('en-US', {minimumFractionDigits:2}) + (type === 'percentage' ? ` (${val}%)` : '');
+                }
             } else {
-                display.style.display = 'none';
+                if (display) display.style.display = 'none';
             }
+        }
+
+        // Summary Breakdown display updates
+        const billDiscEl = document.getElementById('bill-discount-display');
+        if (billDiscEl) {
+            billDiscEl.textContent = discountAmount > 0 ? ('-Rs. ' + discountAmount.toLocaleString('en-US', {minimumFractionDigits:2})) : '-Rs. 0.00';
+        }
+        const itemDiscEl = document.getElementById('item-discount-display');
+        if (itemDiscEl) {
+            itemDiscEl.textContent = '-Rs. 0.00';
+        }
+        const shipTaxEl = document.getElementById('shipping-tax-display');
+        if (shipTaxEl) {
+            shipTaxEl.textContent = 'Rs. ' + shipping.toLocaleString('en-US', {minimumFractionDigits:2});
         }
 
         // Keep the staged gift card redemption valid: full-value redemption
@@ -1653,20 +1816,190 @@ Matches reference UI photo exactly
             const grossTotal = Math.max(0, sub - discountAmount + shipping);
             if (grossTotal < redeemedGiftCard.value) {
                 redeemedGiftCard = null;
-                gcRow.style.display = 'none';
+                if (gcRow) gcRow.style.display = 'none';
                 showToast('Gift card removed — the bill total fell below the card value.', 'warning');
             } else {
                 document.getElementById('gc-row-number').textContent = redeemedGiftCard.card_number;
                 document.getElementById('gc-row-amount').textContent = redeemedGiftCard.value.toLocaleString('en-US', {minimumFractionDigits:2});
-                gcRow.style.display = 'flex';
+                if (gcRow) gcRow.style.display = 'flex';
             }
         } else {
-            gcRow.style.display = 'none';
+            if (gcRow) gcRow.style.display = 'none';
         }
 
         const total = Math.max(0, sub - discountAmount + shipping - giftCardDeduction());
-        document.getElementById('total').textContent = total.toLocaleString('en-US', {minimumFractionDigits:2});
+        document.getElementById('total').textContent = 'Rs. ' + total.toLocaleString('en-US', {minimumFractionDigits:2});
         updateCheckoutBtn();
+    }
+
+    // ---- Discount Modal Management ----
+    let modalDiscType = 'percentage';
+    
+    function openDiscountModal() {
+        modalDiscType = discountType || 'percentage';
+        setDiscountModalType(modalDiscType);
+        document.getElementById('modal-discount-input').value = discountValue || '';
+        previewModalDiscount();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('discountModal')).show();
+    }
+
+    function setDiscountModalType(type) {
+        modalDiscType = type;
+        const pctBtn = document.getElementById('modal-disc-type-pct');
+        const fixBtn = document.getElementById('modal-disc-type-fix');
+        const unitSpan = document.getElementById('modal-disc-unit');
+        const presets = document.getElementById('modal-pct-presets');
+
+        if (type === 'percentage') {
+            pctBtn.style.background = '#f5a524';
+            pctBtn.style.color = '#111317';
+            fixBtn.style.background = '#282f3d';
+            fixBtn.style.color = '#cbd5e1';
+            unitSpan.textContent = '%';
+            if (presets) presets.style.display = 'flex';
+        } else {
+            fixBtn.style.background = '#f5a524';
+            fixBtn.style.color = '#111317';
+            pctBtn.style.background = '#282f3d';
+            pctBtn.style.color = '#cbd5e1';
+            unitSpan.textContent = 'Rs.';
+            if (presets) presets.style.display = 'none';
+        }
+        previewModalDiscount();
+    }
+
+    function applyDiscountPreset(pct) {
+        setDiscountModalType('percentage');
+        document.getElementById('modal-discount-input').value = pct;
+        previewModalDiscount();
+    }
+
+    function previewModalDiscount() {
+        const sub = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        const val = parseFloat(document.getElementById('modal-discount-input').value) || 0;
+        let disc = 0;
+        if (modalDiscType === 'percentage') {
+            disc = (sub * Math.min(val, 100)) / 100;
+        } else {
+            disc = Math.min(val, sub);
+        }
+        const previewTotal = Math.max(0, sub - disc);
+        document.getElementById('modal-disc-preview').textContent = 'Rs. ' + previewTotal.toLocaleString('en-US', {minimumFractionDigits:2}) + ` (-Rs. ${disc.toLocaleString('en-US', {minimumFractionDigits:2})})`;
+    }
+
+    function saveDiscountModal() {
+        const val = parseFloat(document.getElementById('modal-discount-input').value) || 0;
+        document.getElementById('discount-type').value = val > 0 ? modalDiscType : '';
+        document.getElementById('discount-value').value = val;
+        applyDiscount();
+        bootstrap.Modal.getInstance(document.getElementById('discountModal')).hide();
+    }
+
+    function removeDiscountModal() {
+        document.getElementById('discount-type').value = '';
+        document.getElementById('discount-value').value = 0;
+        applyDiscount();
+        bootstrap.Modal.getInstance(document.getElementById('discountModal')).hide();
+    }
+
+    // ---- Other Payments Modal ----
+    function openOtherPaymentModal() {
+        if (cart.length === 0) {
+            showToast('Cart is empty! Add products first.', 'warning');
+            return;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('otherPaymentsModal')).show();
+    }
+
+    function chooseOtherPayMethod(method) {
+        bootstrap.Modal.getInstance(document.getElementById('otherPaymentsModal')).hide();
+        if (method === 'giftcard') {
+            openGiftCardRedeemModal();
+        } else if (method === 'multipay') {
+            selectPaymentBar('multipay', document.getElementById('pay-btn-qr'));
+        } else {
+            selectPaymentBar(method, document.getElementById('pay-btn-qr'));
+        }
+    }
+
+    // ---- Hold Orders Management ----
+    let heldOrders = JSON.parse(localStorage.getItem('pos_held_orders') || '[]');
+
+    function updateHeldOrdersBadge() {
+        const badge = document.getElementById('held-orders-badge');
+        if (!badge) return;
+        if (heldOrders.length > 0) {
+            badge.textContent = heldOrders.length;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function handleHoldOrder() {
+        if (cart.length === 0) {
+            openHeldOrdersModal();
+            return;
+        }
+        const orderId = document.getElementById('pos-bill-number')?.textContent || (Date.now() % 10000);
+        const heldOrder = {
+            id: orderId,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            cart: JSON.parse(JSON.stringify(cart)),
+            selectedCustomerId: selectedCustomerId,
+            customerName: document.getElementById('pos-customer-name')?.textContent || 'Customer',
+            discountType: discountType,
+            discountValue: discountValue,
+            total: document.getElementById('total')?.textContent || '0.00'
+        };
+        heldOrders.push(heldOrder);
+        localStorage.setItem('pos_held_orders', JSON.stringify(heldOrders));
+        updateHeldOrdersBadge();
+        showToast(`Bill #${orderId} held successfully`, 'warning');
+        clearCart();
+    }
+
+    function openHeldOrdersModal() {
+        const list = document.getElementById('held-orders-list');
+        if (heldOrders.length === 0) {
+            list.innerHTML = `<div class="text-center py-4 text-muted"><i class="far fa-pause-circle fa-2x mb-2 d-block text-secondary"></i>No orders currently on hold.</div>`;
+        } else {
+            list.innerHTML = heldOrders.map((o, idx) => `
+                <div class="p-3 mb-2 rounded d-flex align-items-center justify-content-between" style="background:#111317;border:1px solid #282f3d;">
+                    <div>
+                        <div class="fw-bold text-white">Bill #${o.id} <span class="badge bg-secondary ms-1">${o.time}</span></div>
+                        <div class="small text-muted">${o.cart.length} items • ${o.total}</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-warning fw-bold" style="background:#f5a524;color:#111317;border:none;" onclick="resumeHeldOrder(${idx})">Resume</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteHeldOrder(${idx})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('heldOrdersModal')).show();
+    }
+
+    function resumeHeldOrder(idx) {
+        const order = heldOrders.splice(idx, 1)[0];
+        localStorage.setItem('pos_held_orders', JSON.stringify(heldOrders));
+        updateHeldOrdersBadge();
+        cart = order.cart;
+        if (order.selectedCustomerId) {
+            selectCustomer(order.selectedCustomerId, order.customerName);
+        }
+        document.getElementById('discount-type').value = order.discountType || '';
+        document.getElementById('discount-value').value = order.discountValue || 0;
+        renderCart();
+        bootstrap.Modal.getInstance(document.getElementById('heldOrdersModal')).hide();
+        showToast(`Bill #${order.id} resumed`, 'success');
+    }
+
+    function deleteHeldOrder(idx) {
+        heldOrders.splice(idx, 1);
+        localStorage.setItem('pos_held_orders', JSON.stringify(heldOrders));
+        updateHeldOrdersBadge();
+        openHeldOrdersModal();
     }
 
     // ---- Update Checkout Button ----
@@ -2120,10 +2453,16 @@ Matches reference UI photo exactly
 
     function selectCustomer(id, name) {
         selectedCustomerId = id;
-        document.getElementById('pos-customer-name').textContent = name;
-        document.getElementById('pos-customer-name').style.color = '#1f2937';
-        document.getElementById('pos-customer-name').style.fontWeight = 'bold';
-        document.getElementById('pos-customer-sub').style.display = 'none';
+        const tag = document.getElementById('pos-customer-tag');
+        const nameEl = document.getElementById('pos-customer-name');
+        const btnLabel = document.getElementById('btn-customer-label');
+        if (tag && nameEl) {
+            nameEl.textContent = name;
+            tag.style.display = 'inline-flex';
+        }
+        if (btnLabel) {
+            btnLabel.textContent = name.length > 8 ? name.substring(0, 7) + '...' : name;
+        }
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('customerSelectModal'));
         if (modal) modal.hide();
@@ -2133,12 +2472,13 @@ Matches reference UI photo exactly
         document.getElementById('customer-search-results').style.display = 'none';
     }
 
-    function clearCustomer() {
+    function clearCustomer(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
         selectedCustomerId = null;
-        document.getElementById('pos-customer-name').textContent = 'Customer Details';
-        document.getElementById('pos-customer-name').style.color = '#1f2937';
-        document.getElementById('pos-customer-name').style.fontWeight = 'bold';
-        document.getElementById('pos-customer-sub').style.display = 'block';
+        const tag = document.getElementById('pos-customer-tag');
+        const btnLabel = document.getElementById('btn-customer-label');
+        if (tag) tag.style.display = 'none';
+        if (btnLabel) btnLabel.textContent = 'CUSTOMER';
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('customerSelectModal'));
         if (modal) modal.hide();
@@ -2405,7 +2745,8 @@ Matches reference UI photo exactly
         showToast(@json('Gift card ' . $pendingGiftCard->card_number . ' is in the cart — it becomes SOLD when checkout completes.'), 'info');
     @endif
 
-    // Initial filter
+    // Initial setup
+    updateHeldOrdersBadge();
     filterProducts();
 </script>
 @endpush

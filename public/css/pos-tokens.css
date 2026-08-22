@@ -428,7 +428,7 @@ html, body {
 }
 
 /* =========================================================
-   GLOBAL ICON RAIL (EXACTLY 88px) - PART 4 SPEC
+   GLOBAL ICON RAIL (EXACTLY 88px, 64px ITEM HEIGHT) - PART 4 REVISED
    ========================================================= */
 #pos-icon-rail,
 .pos-global-rail {
@@ -443,11 +443,12 @@ html, body {
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
-    z-index: 20 !important;
+    z-index: 30 !important;
     user-select: none !important;
     margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box !important;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .pos-global-rail .rail-scroll-body {
@@ -459,7 +460,7 @@ html, body {
     display: flex;
     flex-direction: column;
     padding: 4px 0;
-    gap: 2px;
+    gap: 1px;
 }
 
 .pos-global-rail .rail-scroll-body::-webkit-scrollbar {
@@ -468,13 +469,21 @@ html, body {
     height: 0px !important;
 }
 
+.pos-global-rail .rail-divider {
+    height: 1px !important;
+    min-height: 1px !important;
+    background-color: var(--surface-muted) !important;
+    margin: 6px 12px !important;
+    flex-shrink: 0 !important;
+}
+
 .pos-global-rail .rail-item {
     width: calc(100% - 16px) !important;
-    height: 72px !important;
-    min-height: 72px !important;
-    max-height: 72px !important;
-    margin: 2px 8px !important;
-    padding: 6px 4px !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 64px !important;
+    margin: 1px 8px !important;
+    padding: 4px 2px !important;
     border-radius: 8px !important;
     background: transparent;
     color: var(--on-surface-variant) !important;
@@ -484,21 +493,21 @@ html, body {
     justify-content: center !important;
     text-decoration: none !important;
     border: none !important;
-    border-left: 4px solid transparent !important;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
     cursor: pointer !important;
     position: relative !important;
     box-sizing: border-box !important;
+    flex-shrink: 0 !important;
 }
 
 .pos-global-rail .rail-item .rail-icon {
-    font-size: 24px !important;
-    line-height: 24px !important;
-    width: 24px !important;
-    height: 24px !important;
-    margin-bottom: 4px !important;
+    font-size: 22px !important;
+    line-height: 22px !important;
+    width: 22px !important;
+    height: 22px !important;
+    margin-bottom: 3px !important;
     color: var(--on-surface-variant) !important;
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 22 !important;
     transition: color 0.15s ease !important;
     display: inline-block !important;
 }
@@ -507,16 +516,13 @@ html, body {
     font-size: 10px !important;
     line-height: 12px !important;
     font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
+    letter-spacing: 0.02em !important;
     text-transform: uppercase !important;
     color: var(--on-surface-variant) !important;
     text-align: center !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    display: block !important;
 }
 
 .pos-global-rail .rail-item:hover {
@@ -532,12 +538,11 @@ html, body {
 .pos-global-rail .rail-item.active {
     background-color: var(--primary) !important;
     color: var(--on-primary) !important;
-    border-left: 4px solid var(--primary) !important;
 }
 
 .pos-global-rail .rail-item.active .rail-icon {
     color: var(--on-primary) !important;
-    font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 24 !important;
+    font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 0, 'opsz' 22 !important;
 }
 
 .pos-global-rail .rail-item.active .rail-label {
@@ -545,6 +550,7 @@ html, body {
     font-weight: 800 !important;
 }
 
+/* Pinned Bottom Pin (Lock + Logout) */
 .pos-global-rail .rail-bottom-pin {
     margin-top: auto !important;
     padding: 6px 0 8px !important;
@@ -552,20 +558,36 @@ html, body {
     flex-shrink: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 2px !important;
+    gap: 1px !important;
     background: var(--surface) !important;
 }
 
 .pos-global-rail .rail-bottom-btn {
     background: transparent !important;
     border: none !important;
-    border-left: 4px solid transparent !important;
     cursor: pointer !important;
     width: calc(100% - 16px) !important;
 }
 
 .pos-global-rail .rail-bottom-btn:hover {
     background-color: var(--surface-high) !important;
+}
+
+/* Logout Specific Ghost / Error Styling */
+.pos-global-rail .rail-logout-btn,
+.pos-global-rail .rail-logout-btn .rail-icon,
+.pos-global-rail .rail-logout-btn .rail-label {
+    color: var(--error-solid) !important;
+}
+
+.pos-global-rail .rail-logout-btn:hover {
+    background-color: rgba(239, 68, 68, 0.10) !important;
+    color: var(--error-solid) !important;
+}
+
+.pos-global-rail .rail-logout-btn:hover .rail-icon,
+.pos-global-rail .rail-logout-btn:hover .rail-label {
+    color: var(--error-solid) !important;
 }
 
 /* Tooltips */
@@ -582,126 +604,43 @@ html, body {
     background: var(--surface-high);
     color: var(--on-surface);
     border: 1px solid var(--surface-muted);
-    padding: 4px 8px;
+    padding: 5px 10px;
     font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
-    border-radius: 4px;
+    border-radius: 8px;
     z-index: 1000;
     pointer-events: none;
     box-shadow: none !important;
 }
 
-/* =========================================================
-   HAMBURGER DRAWER OVERLAY - RESTYLED WITH TOKENS
-   ========================================================= */
-#pos-sidebar-panel,
-.pos-drawer-overlay-panel {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 280px !important;
-    background: var(--surface) !important;
-    border-right: 1px solid var(--surface-muted) !important;
-    z-index: 1050 !important;
-    transform: translateX(-280px) !important;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    overflow-y: auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    box-shadow: none !important;
+/* Collapsed Rail Mode (via Hamburger Strip Toggle) */
+body.rail-collapsed #pos-icon-rail,
+body.rail-collapsed .pos-global-rail {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+    flex: 0 0 60px !important;
 }
 
-#pos-sidebar-panel.sidebar-open,
-.pos-drawer-overlay-panel.sidebar-open {
-    transform: translateX(0) !important;
+body.rail-collapsed .pos-global-rail .rail-label {
+    display: none !important;
 }
 
-#pos-sidebar-overlay,
-.pos-drawer-backdrop {
-    position: fixed !important;
-    inset: 0 !important;
-    background: rgba(20, 22, 26, 0.60) !important;
-    z-index: 1045 !important;
-    display: none;
-    opacity: 0;
-    transition: opacity 0.2s ease !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
-#pos-sidebar-overlay.visible,
-.pos-drawer-backdrop.visible {
-    display: block !important;
-    opacity: 1 !important;
-}
-
-/* Drawer typography and items */
-.drawer-header {
-    height: 64px !important;
-    padding: 0 16px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    border-bottom: 1px solid var(--surface-muted) !important;
-    background: var(--surface) !important;
-    flex-shrink: 0 !important;
-}
-
-.drawer-heading {
-    padding: 14px 16px 4px !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    color: var(--on-surface-variant) !important;
-    list-style: none !important;
-}
-
-.drawer-nav-item {
-    margin: 2px 8px !important;
-    list-style: none !important;
-}
-
-.drawer-nav-link {
+body.rail-collapsed .pos-global-rail .rail-item {
+    height: 48px !important;
     min-height: 48px !important;
-    padding: 8px 16px !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    color: var(--on-surface-variant) !important;
-    text-decoration: none !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    transition: background-color 0.15s, color 0.15s !important;
-    box-sizing: border-box !important;
+    max-height: 48px !important;
+    width: calc(100% - 12px) !important;
+    margin: 1px 6px !important;
 }
 
-.drawer-nav-link .material-symbols-outlined {
-    font-size: 20px !important;
-    color: var(--on-surface-variant) !important;
+body.rail-collapsed .pos-global-rail .rail-item .rail-icon {
+    margin-bottom: 0 !important;
 }
 
-.drawer-nav-link:hover {
-    background: var(--surface-high) !important;
-    color: var(--on-surface) !important;
-}
-
-.drawer-nav-link:hover .material-symbols-outlined {
-    color: var(--on-surface) !important;
-}
-
-.drawer-nav-link.active {
-    background: var(--primary) !important;
-    color: var(--on-primary) !important;
-    font-weight: 700 !important;
-}
-
-.drawer-nav-link.active .material-symbols-outlined {
-    color: var(--on-primary) !important;
-    font-variation-settings: 'FILL' 1 !important;
+body.rail-collapsed .pos-global-rail .rail-divider {
+    margin: 4px 8px !important;
 }
 
 /* Page content wrapper override */

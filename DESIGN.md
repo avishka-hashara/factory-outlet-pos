@@ -1,66 +1,68 @@
 ---
-name: Lumen Terminal
+name: Laravel POS Design System
 colors:
-  surface: '#111317'
-  surface-dim: '#111317'
-  surface-bright: '#37393e'
-  surface-container-lowest: '#0c0e12'
-  surface-container-low: '#1a1c20'
-  surface-container: '#1e2024'
-  surface-container-high: '#282a2e'
-  surface-container-highest: '#333539'
-  on-surface: '#e2e2e8'
+  surface: '#0b141f'
+  surface-dim: '#0b141f'
+  surface-bright: '#313a46'
+  surface-container-lowest: '#060f1a'
+  surface-container-low: '#131c28'
+  surface-container: '#17202c'
+  surface-container-high: '#222b36'
+  surface-container-highest: '#2d3542'
+  on-surface: '#dae3f3'
   on-surface-variant: '#d7c3ae'
-  inverse-surface: '#e2e2e8'
-  inverse-on-surface: '#2f3035'
+  inverse-surface: '#dae3f3'
+  inverse-on-surface: '#28313d'
   outline: '#9f8e7a'
-  outline-variant: '#524434'
-  surface-tint: '#ffb957'
-  primary: '#ffc77f'
-  on-primary: '#462b00'
-  primary-container: '#f5a524'
-  on-primary-container: '#643f00'
-  inverse-primary: '#835400'
-  secondary: '#4ae176'
-  on-secondary: '#003915'
-  secondary-container: '#00b954'
-  on-secondary-container: '#004119'
-  tertiary: '#ffc3be'
-  on-tertiary: '#68000a'
-  tertiary-container: '#ff9a93'
-  on-tertiary-container: '#930013'
+  outline-variant: '#524534'
+  surface-tint: '#ffb955'
+  primary: '#ffc880'
+  on-primary: '#452b00'
+  primary-container: '#f5a623'
+  on-primary-container: '#644000'
+  inverse-primary: '#835500'
+  secondary: '#c4c6ce'
+  on-secondary: '#2d3037'
+  secondary-container: '#44474e'
+  on-secondary-container: '#b3b5bd'
+  tertiary: '#d1d1d6'
+  on-tertiary: '#2f3034'
+  tertiary-container: '#b5b6ba'
+  on-tertiary-container: '#46474b'
   error: '#ffb4ab'
   on-error: '#690005'
   error-container: '#93000a'
   on-error-container: '#ffdad6'
-  primary-fixed: '#ffddb5'
-  primary-fixed-dim: '#ffb957'
-  on-primary-fixed: '#2a1800'
-  on-primary-fixed-variant: '#643f00'
-  secondary-fixed: '#6bff8f'
-  secondary-fixed-dim: '#4ae176'
-  on-secondary-fixed: '#002109'
-  on-secondary-fixed-variant: '#005321'
-  tertiary-fixed: '#ffdad7'
-  tertiary-fixed-dim: '#ffb3ad'
-  on-tertiary-fixed: '#410004'
-  on-tertiary-fixed-variant: '#930013'
-  background: '#111317'
-  on-background: '#e2e2e8'
-  surface-variant: '#333539'
+  primary-fixed: '#ffddb4'
+  primary-fixed-dim: '#ffb955'
+  on-primary-fixed: '#291800'
+  on-primary-fixed-variant: '#633f00'
+  secondary-fixed: '#e1e2eb'
+  secondary-fixed-dim: '#c4c6ce'
+  on-secondary-fixed: '#191c22'
+  on-secondary-fixed-variant: '#44474e'
+  tertiary-fixed: '#e2e2e6'
+  tertiary-fixed-dim: '#c6c6ca'
+  on-tertiary-fixed: '#1a1c1f'
+  on-tertiary-fixed-variant: '#45474a'
+  background: '#0b141f'
+  on-background: '#dae3f3'
+  surface-variant: '#2d3542'
 typography:
-  display-price:
+  display-metrics:
     fontFamily: Inter
     fontSize: 48px
     fontWeight: '700'
     lineHeight: 56px
+    letterSpacing: -0.02em
   headline-lg:
-    fontFamily: Inter
+    fontFamily: Hanken Grotesk
     fontSize: 32px
     fontWeight: '600'
     lineHeight: 40px
+    letterSpacing: -0.01em
   headline-md:
-    fontFamily: Inter
+    fontFamily: Hanken Grotesk
     fontSize: 24px
     fontWeight: '600'
     lineHeight: 32px
@@ -74,17 +76,22 @@ typography:
     fontSize: 16px
     fontWeight: '400'
     lineHeight: 24px
+  body-sm:
+    fontFamily: Inter
+    fontSize: 14px
+    fontWeight: '400'
+    lineHeight: 20px
   label-caps:
     fontFamily: Inter
     fontSize: 12px
-    fontWeight: '700'
+    fontWeight: '600'
     lineHeight: 16px
-    letterSpacing: 0.1em
-  label-sm:
+    letterSpacing: 0.05em
+  metric-sm:
     fontFamily: Inter
-    fontSize: 11px
-    fontWeight: '500'
-    lineHeight: 14px
+    fontSize: 16px
+    fontWeight: '700'
+    lineHeight: 24px
 rounded:
   sm: 0.25rem
   DEFAULT: 0.5rem
@@ -93,97 +100,70 @@ rounded:
   xl: 1.5rem
   full: 9999px
 spacing:
-  touch-target-min: 56px
-  stack-gap: 8px
-  panel-padding: 24px
-  grid-gutter: 1px
-  safe-margin: 16px
+  base: 4px
+  xs: 8px
+  sm: 12px
+  md: 16px
+  lg: 24px
+  xl: 32px
+  2xl: 48px
+  gutter: 16px
+  margin-mobile: 16px
+  margin-desktop: 32px
 ---
 
 ## Brand & Style
 
-This design system is engineered for high-stakes retail environments where speed, legibility, and reliability are paramount. The aesthetic is a **Modern-Industrial Dark Mode**, pulling inspiration from high-end technical equipment and legacy terminal interfaces but refined with contemporary precision.
+The design system is built for a high-performance retail environment where speed, precision, and clarity are paramount. The brand personality is **Premium Technical**: it conveys the reliability of enterprise software with the bespoke finish of a luxury tool. 
 
-The style is strictly **Flat and High-Contrast**. By eliminating shadows, gradients, and decorative flourishes, the interface reduces cognitive load and visual noise. The primary focus is on information density and tactile reliability. The interface must feel "armored"—robust enough for professional use under harsh fluorescent lighting while maintaining a sophisticated, tech-forward edge.
-
-**Key Visual Principles:**
-- **Zero Elevation:** Hierarchy is established through tonal layering and borders, never shadows.
-- **Utility First:** Every pixel serves a functional purpose; decorative elements are stripped away.
-- **Tension:** A balance of dense data tables and large, generous touch targets.
+The aesthetic follows a **Refined Dark Minimalism** approach. It utilizes deep, matte surfaces and high-contrast amber accents to guide the eye toward critical transaction data. The interface prioritizes functional density without clutter, using subtle tonal shifts instead of heavy shadows or gradients to define hierarchy. The emotional response should be one of "effortless control"—a system that feels quiet when idle but sharp and responsive during peak retail hours.
 
 ## Colors
 
-The palette is optimized for extreme legibility in dark environments. The foundation uses a "deep-space" neutral set to prevent eye strain during long shifts.
+This design system employs a "Void" palette, where the darkest value (#0E1013) serves as the canvas, allowing interactive elements to emerge through luminance rather than color. 
 
-- **Primary (Amber):** Reserved for the "Critical Path"—grand totals, primary "Pay" buttons, and active selection states. It radiates against the dark background to draw the eye immediately to the most important action.
-- **Success/Error:** High-chroma green and red are used sparingly for status indicators and destructive actions (voiding/deleting).
-- **Surface Architecture:** 
-  - `Base`: #14161A (Deepest layer)
-  - `Surface`: #1E2126 (Panels, lists, and cards)
-  - `Muted`: #2C3037 (Input backgrounds and inactive states)
+- **Primary Accent:** Use the amber (#F5A623) exclusively for primary actions, success states related to commerce, and critical focus indicators.
+- **Surface Hierarchy:** Depth is created by "stepping up" the brightness of the gray. The background is the lowest point, cards sit one level above, and active/hover states sit at the highest tonal level.
+- **Semantic Usage:** Positive, Negative, and Info colors should be used sparingly for status indicators and data visualization. Ensure they maintain a 1.5px stroke weight when used in icons to remain consistent with the overall aesthetic.
 
 ## Typography
 
-**Inter** is utilized for its geometric clarity and exceptional legibility at small sizes. 
+The typographic system utilizes **Hanken Grotesk** for headlines to inject a sharp, contemporary "designer" feel into the app's structure. For all functional data, **Inter** is used for its superior legibility.
 
-**Critical Rules:**
-1. **Tabular Figures:** All numerical data (prices, quantities, weights) **must** use tabular (monospaced) figures to ensure columns align perfectly in receipts and order lists.
-2. **Micro-Labels:** Use `label-caps` for secondary metadata (e.g., "SKU:", "TAXABLE"). The increased letter-spacing ensures readability even on low-resolution hardware.
-3. **Price Hierarchy:** The total amount should always use the `display-price` token to provide a clear focal point for both the operator and the customer.
+**Key Rule:** All numerical data (prices, quantities, stock levels) must use `font-variant-numeric: tabular-nums`. This ensures that columns of numbers align perfectly, allowing the user to scan totals and line items instantly. Large metrics should be bold and high-contrast to emphasize the financial status of the current transaction.
 
 ## Layout & Spacing
 
-The layout follows a **Rigid Grid** philosophy. It is designed to maximize the screen real estate of a standard 15" or 22" POS terminal.
+The design system uses a **Fluid Grid** model with a consistent 4px base unit. 
 
-- **The 1px Rule:** Use 1px borders (#2C3037) instead of margins to separate functional zones. This creates a "blueprint" feel and maximizes the usable area for touch targets.
-- **Touch Targets:** A strict minimum height of **56px** is enforced for all interactive elements to accommodate gloved hands or rapid, imprecise tapping.
-- **Layout Zones:**
-  - **Left/Center:** Transaction List (Dense, scrollable).
-  - **Right Sidebar:** Keypad and Action Buttons (Large, fixed).
-  - **Bottom/Top Bar:** System status and Clerk info.
+- **Desktop/Tablet:** 12-column grid with 16px gutters. In a POS context, layouts are often split-pane: a 4-column side panel for the "Current Cart" and an 8-column main area for "Product Selection."
+- **Mobile:** 4-column grid with 16px margins.
+- **Rhythm:** Use generous internal padding within cards (24px) to maintain the premium, airy feel, even when data density is high. Touch targets must never fall below 44px in height for physical retail use.
 
 ## Elevation & Depth
 
-This system avoids all shadows and blurs. Depth is communicated through **Value Stepping**:
+This design system rejects glossy effects and heavy drop shadows in favor of **Tonal Layering** and **Low-Contrast Outlines**.
 
-1. **Background (#14161A):** The void. Used for the application shell and gutters.
-2. **Surface (#1E2126):** The primary workspace. Used for the main transaction area and secondary buttons.
-3. **Contrast Surface (#2C3037):** Used for input fields and inactive button states.
-4. **Active State (#F5A524):** The highest "elevation." When an item is selected or a button is pressed, it fills with the primary accent color or receives a thick 2px inner-border.
+- **Surfaces:** Use `#171A20` for standard cards. When an element is hovered or active, transition the background to `#1E222A`.
+- **Borders:** Every surface must have a 1px solid border using `#272C35`. This provides structural definition without relying on shadows.
+- **Shadows:** Use a single, very soft ambient shadow for overlays/modals only: `0px 10px 30px rgba(0, 0, 0, 0.5)`. Do not use shadows on standard page cards or buttons.
+- **Depth:** Higher z-index elements should have slightly lighter borders to simulate closeness to the light source.
 
 ## Shapes
 
-The shape language is **Technical and Precise**. 
-
-While the general vibe is industrial, a consistent **8px (rounded-lg)** radius is applied to all buttons and panels. This provides enough visual distinction to separate interactive components from the rigid 1px grid of the background layout. 
-
-**Small Elements:** Checkboxes and toggle tracks should use a smaller 4px radius. 
-**Container Rails:** The main sidebar and header containers should remain sharp (0px) against the edges of the screen to maintain the "integrated terminal" look.
+The shape language is structured but approachable.
+- **Cards & Panels:** Use a radius of `12px` (rounded-lg) to frame content sections.
+- **Interactive Elements:** Buttons, input fields, and tags use a tighter `8px` (standard) radius to signal precision and utility.
+- **Icons:** Use 1.5px stroke width with "rounded" line caps and joins to soften the technical feel of the interface.
 
 ## Components
 
-### Buttons
-- **Primary Action:** Solid Amber (#F5A524) background with Black (#14161A) text.
-- **Secondary Action:** Ghost style. 1px Border (#2C3037) with White text.
-- **Destructive (Void):** Solid Red (#EF4444) background.
-- **Touch Target:** Minimum 56px height. Full-width in sidebars.
-
-### Input Fields
-- **Background:** #2C3037.
-- **Border:** 1px solid #3E444D.
-- **Focus State:** Border changes to Amber (#F5A524) with no glow.
-
-### Transaction List Items
-- **Height:** 64px.
-- **Separator:** 1px horizontal line (#2C3037).
-- **Active Selection:** Background shifts to #2C3037 with a 4px Amber "indicator bar" on the far left.
-
-### Keypads
-- **Buttons:** 1:1 Aspect ratio where possible. 
-- **Typography:** Large, bold weight for digits.
-- **Feedback:** Instant color inversion on tap (Active state).
-
-### Status Badges
-- **Style:** Small, uppercase text.
-- **Success:** Green text with a subtle 10% opacity green background.
-- **Error:** Red text with a subtle 10% opacity red background.
+- **Buttons:** 
+    - *Primary:* Solid `#F5A623` background with black text. No shadow.
+    - *Secondary:* Transparent background with `#272C35` border and white text.
+    - *Size:* 48px height for main POS actions to facilitate touch.
+- **Inputs:** Background of `#0E1013` (inset feel) with a `#272C35` border. On focus, the border changes to `#F5A623`.
+- **Cards:** Background `#171A20`, 12px radius, 1px border `#272C35`. No inner shadows.
+- **Chips/Status:** Low-profile capsules with a subtle background tint and 1.5px stroke icons. For example, a "Paid" status would have a dark green border and green text.
+- **Lists:** Row-based items with 1px bottom borders. Hover state shifts background to `#1E222A`. Active selection uses a 3px vertical amber bar on the left edge.
+- **Charts:** Use amber gradients for area fills but keep the lines sharp and 2px thick.

@@ -25,7 +25,7 @@
     @stack('styles')
 </head>
 <body class="h-screen w-screen overflow-hidden bg-background text-on-surface font-sans flex flex-col m-0 p-0">
-    <!-- Top Navbar -->
+    <!-- Top Navbar (64px) -->
     @include('partials.navbar')
 
     <!-- POS App Container -->
@@ -33,10 +33,7 @@
         <!-- Global Icon Rail (88px) -->
         @include('partials.pos-rail')
 
-        <!-- Collapsible Sidebar Panel (Drawer Overlay) -->
-        @include('partials.sidebar')
-
-        <!-- Page Content -->
+        <!-- Page Content Area -->
         <main id="page-content-wrapper" class="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-background p-6">
             @yield('content')
         </main>
@@ -49,47 +46,26 @@
 
     @stack('scripts')
 
-    <!-- Drawer Toggle Script -->
+    <!-- Hamburger Rail Compact Toggle Script -->
     <script>
-    function posSidebarToggle() {
-        const p = document.getElementById('pos-sidebar-panel');
-        const o = document.getElementById('pos-sidebar-overlay');
-        if (!p) return;
-        if (p.classList.contains('sidebar-open')) {
-            posSidebarClose();
-        } else {
-            posSidebarOpen();
+    (function() {
+        function toggleRailCollapse() {
+            const isCollapsed = document.body.classList.toggle('rail-collapsed');
+            localStorage.setItem('pos_rail_collapsed', isCollapsed ? '1' : '0');
         }
-    }
 
-    function posSidebarOpen() {
-        const p = document.getElementById('pos-sidebar-panel');
-        const o = document.getElementById('pos-sidebar-overlay');
-        if (p) p.classList.add('sidebar-open');
-        if (o) o.classList.add('visible');
-    }
+        if (localStorage.getItem('pos_rail_collapsed') === '1') {
+            document.body.classList.add('rail-collapsed');
+        }
 
-    function posSidebarClose() {
-        const p = document.getElementById('pos-sidebar-panel');
-        const o = document.getElementById('pos-sidebar-overlay');
-        if (p) p.classList.remove('sidebar-open');
-        if (o) o.classList.remove('visible');
-    }
-
-    // Bind navbar toggle button
-    const navbarToggleBtn = document.getElementById('sidebarToggle');
-    if (navbarToggleBtn) {
-        navbarToggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            posSidebarToggle();
-        });
-    }
-
-    // Close with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') posSidebarClose();
-    });
+        const navbarToggleBtn = document.getElementById('sidebarToggle');
+        if (navbarToggleBtn) {
+            navbarToggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleRailCollapse();
+            });
+        }
+    })();
     </script>
 
     {{-- ===== Global Shopify Auto-Sync ===== --}}

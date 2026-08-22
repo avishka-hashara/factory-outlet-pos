@@ -14,7 +14,7 @@
     <!-- Google Fonts: Inter & Material Symbols Outlined -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 
     <!-- Vite (Tailwind CSS + JS) -->
@@ -33,9 +33,6 @@
         <!-- Global Icon Rail (88px) -->
         @include('partials.pos-rail')
 
-        <!-- Collapsible Sidebar Panel (Drawer Overlay) -->
-        @include('partials.sidebar')
-
         <!-- POS Page Content (Center Panel + Cart Panel) -->
         @yield('content')
     </div>
@@ -50,18 +47,42 @@
 
     @stack('scripts')
 
+    <!-- Hamburger Rail Compact Toggle Script -->
+    <script>
+    (function() {
+        function toggleRailCollapse() {
+            const isCollapsed = document.body.classList.toggle('rail-collapsed');
+            localStorage.setItem('pos_rail_collapsed', isCollapsed ? '1' : '0');
+        }
+
+        if (localStorage.getItem('pos_rail_collapsed') === '1') {
+            document.body.classList.add('rail-collapsed');
+        }
+
+        const navbarToggleBtn = document.getElementById('sidebarToggle');
+        if (navbarToggleBtn) {
+            navbarToggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleRailCollapse();
+            });
+        }
+    })();
+    </script>
+
     {{-- ===== Global Shopify Auto-Sync ===== --}}
     <script>
     (function () {
         const SYNC_URL         = '{{ route('shopify.sync.all') }}';
         const COLLECTIONS_URL  = '{{ route('shopify.fast.category.sync') }}';
         const STATUS_URL       = '{{ route('shopify.sync.status') }}';
-        const CSRF             = document.querySelector('meta[name="csrf-token"]').content;
+        const CSRF             = document.querySelector('meta[name="csrf-token"]')?.content;
         const AUTO_SYNC_EVERY  = 15 * 60 * 1000;
 
         const btn  = document.getElementById('global-sync-btn');
         const icon = document.getElementById('sync-icon');
         const dot  = document.getElementById('sync-status-dot');
+
+        if (!CSRF) return;
 
         function setDot(state) {
             const map = { idle:'#6c757d', syncing:'#ffc107', ok:'#28a745', error:'#dc3545' };
@@ -136,47 +157,6 @@
         loadStatus();
         setInterval(() => runSync(false), AUTO_SYNC_EVERY);
     })();
-
-    // ===== DRAWER OVERLAY TOGGLE =====
-    function posSidebarToggle() {
-        const p = document.getElementById('pos-sidebar-panel');
-        const o = document.getElementById('pos-sidebar-overlay');
-        if (!p) return;
-        if (p.classList.contains('sidebar-open')) {
-            posSidebarClose();
-        } else {
-            posSidebarOpen();
-        }
-    }
-
-    function posSidebarOpen() {
-        const p = document.getElementById('pos-sidebar-panel');
-        const o = document.getElementById('pos-sidebar-overlay');
-        if (p) p.classList.add('sidebar-open');
-        if (o) o.classList.add('visible');
-    }
-
-    function posSidebarClose() {
-        const p = document.getElementById('pos-sidebar-panel');
-        const o = document.getElementById('pos-sidebar-overlay');
-        if (p) p.classList.remove('sidebar-open');
-        if (o) o.classList.remove('visible');
-    }
-
-    // Bind navbar toggle button to the drawer logic
-    const navbarToggleBtn = document.getElementById('sidebarToggle');
-    if (navbarToggleBtn) {
-        navbarToggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            posSidebarToggle();
-        });
-    }
-
-    // Close with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') posSidebarClose();
-    });
     </script>
 </body>
 </html>

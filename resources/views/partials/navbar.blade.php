@@ -13,7 +13,7 @@
 
         <!-- Wordmark + Subtitle -->
         <div class="flex items-baseline gap-4">
-            <a href="{{ route('dashboard') }}" class="text-primary text-[24px] leading-[32px] font-[900] tracking-tight hover:opacity-90 transition-opacity no-underline">
+            <a href="{{ route('dashboard') }}" class="text-[24px] leading-[32px] font-[900] tracking-tight hover:opacity-90 transition-opacity no-underline" style="color: var(--primary) !important;">
                 {{ \App\Models\Setting::get('app_name', config('app.name', 'LARAVEL')) }}
             </a>
             <span class="text-on-surface-variant text-[14px] leading-5 font-normal tracking-normal">
@@ -48,11 +48,12 @@
         <!-- Amber Add Button: 40x40, rounded 8px, bg-primary, icon on-primary -->
         <button type="button"
                 id="billing-add-btn"
-                class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded bg-primary text-on-primary hover:opacity-90 transition-opacity cursor-pointer border-0"
+                class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded hover:opacity-90 transition-opacity cursor-pointer border-0"
+                style="background-color: var(--primary) !important; color: var(--on-primary) !important;"
                 title="Add custom item"
                 data-bs-toggle="modal"
                 data-bs-target="#quickAddProductModal">
-            <span class="material-symbols-outlined text-[20px] font-bold">add</span>
+            <span class="material-symbols-outlined text-[20px] font-bold" style="color: var(--on-primary) !important;">add</span>
         </button>
     </div>
     @else

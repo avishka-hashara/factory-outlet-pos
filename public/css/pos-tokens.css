@@ -308,13 +308,15 @@ html, body {
     background: var(--color-surface-container-high) !important;
 }
 
+#billing-add-btn,
 .billing-add-btn {
     width: 40px !important;
     height: 40px !important;
     border-radius: var(--radius-default) !important;
-    background: var(--color-primary-container) !important;
+    background: var(--primary) !important;
+    background-color: var(--primary) !important;
     border: none !important;
-    color: var(--color-on-primary-container) !important;
+    color: var(--on-primary) !important;
     font-size: 1rem !important;
     font-weight: 700 !important;
     display: flex;
@@ -325,6 +327,7 @@ html, body {
     transition: opacity 0.15s !important;
 }
 
+#billing-add-btn:hover,
 .billing-add-btn:hover {
     opacity: 0.9 !important;
 }

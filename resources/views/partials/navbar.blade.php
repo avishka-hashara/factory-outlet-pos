@@ -2,12 +2,16 @@
      Lumen Terminal - Top Navigation Bar
      56px height, Modern-Industrial Dark (DESIGN.md / Mock Spec)
      ============================================ -->
-<header class="pos-navbar w-full h-[56px] min-h-[56px] max-h-[56px] bg-surface border-b border-outline-variant px-lg flex items-center justify-between flex-shrink-0 z-40 select-none">
+<header class="pos-navbar w-full h-[56px] min-h-[56px] max-h-[56px] px-lg flex items-center justify-between flex-shrink-0 z-40 select-none"
+        style="background-color: #0E1013 !important; border-bottom: 1px solid #272C35 !important;">
     
     <!-- 1. BRAND & BRANCH (Left Zone) -->
     <div class="flex items-center flex-shrink-0 gap-md">
         <!-- Hamburger / Compact Toggle -->
-        <button id="sidebarToggle" type="button" class="w-8 h-8 flex items-center justify-center rounded border border-border-color bg-transparent hover:bg-hover-surface text-on-surface-variant hover:text-primary hover:border-primary transition-colors cursor-pointer p-0 active:scale-95" title="Toggle Navigation">
+        <button id="sidebarToggle" type="button" 
+                class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer p-0 active:scale-95" 
+                style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important; outline: none !important; box-shadow: none !important;"
+                title="Toggle Navigation">
             <span class="material-symbols-outlined text-[18px]">menu</span>
         </button>
 
@@ -17,7 +21,8 @@
                 {{ \App\Models\Setting::get('app_name', config('app.name', 'RETAIL CORE')) }}
             </a>
             <!-- Branch Badge -->
-            <div class="hidden md:flex items-center gap-2 px-2 py-0.5 rounded border border-border-color bg-hover-surface">
+            <div class="hidden md:flex items-center gap-2 px-2 py-0.5"
+                 style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important;">
                 <span class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
                 <span class="font-label-caps text-[9px] uppercase text-on-surface-variant">Main Branch</span>
             </div>
@@ -37,17 +42,19 @@
                    autocomplete="off"
                    onfocus="handleSearchDropdown()"
                    onblur="setTimeout(() => { const el = document.getElementById('product-search-dropdown'); if (el) el.style.display = 'none'; }, 200)"
-                   class="w-full h-8 bg-dark-bg border border-border-color rounded text-on-surface placeholder:text-on-surface-variant text-body-sm font-body-sm pl-8 pr-3 focus:outline-none focus:border-amber-accent focus:ring-1 focus:ring-amber-accent transition-colors">
+                   class="w-full h-8 text-on-surface placeholder:text-on-surface-variant text-body-sm font-body-sm pl-8 pr-3 focus:outline-none transition-colors"
+                   style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important; outline: none !important; box-shadow: none !important;">
             
             <!-- Live Search Dropdown -->
-            <div id="product-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 z-50 flex-col max-h-96 overflow-y-auto bg-surface border border-border-color rounded shadow-none">
+            <div id="product-search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 z-50 flex-col max-h-96 overflow-y-auto shadow-none"
+                 style="border: 1px solid #272C35 !important; background-color: #171A20 !important; border-radius: 6px !important;">
             </div>
         </div>
 
         <!-- Amber Add Button: 32x32 -->
         <button type="button"
                 id="billing-add-btn"
-                class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded hover:opacity-90 transition-opacity cursor-pointer border-0 bg-primary-container text-black font-bold active:scale-95"
+                class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-[6px] hover:opacity-90 transition-opacity cursor-pointer border-0 bg-primary-container text-black font-bold active:scale-95"
                 title="Add custom item"
                 data-bs-toggle="modal"
                 data-bs-target="#quickAddProductModal">
@@ -57,7 +64,11 @@
     @elseif(request()->routeIs('dashboard'))
     <div class="relative hidden lg:block">
         <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">search</span>
-        <input class="w-56 h-8 bg-dark-bg border border-border-color rounded pl-8 pr-3 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-amber-accent focus:ring-1 focus:ring-amber-accent transition-colors text-body-sm font-body-sm" placeholder="Search..." type="text" id="dashboard-global-search"/>
+        <input class="w-56 h-8 pl-8 pr-3 text-on-surface placeholder:text-on-surface-variant focus:outline-none transition-colors text-body-sm font-body-sm" 
+               placeholder="Search..." 
+               type="text" 
+               id="dashboard-global-search"
+               style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important; outline: none !important; box-shadow: none !important;"/>
     </div>
     @else
     <div class="flex-1"></div>
@@ -73,7 +84,11 @@
 
         <!-- Notification Bell -->
         <div class="dropdown relative">
-            <button class="w-8 h-8 rounded border border-border-color flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-colors active:scale-95 cursor-pointer bg-transparent p-0 relative" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+            <button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-95 cursor-pointer p-0 relative" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false" 
+                    title="Notifications"
+                    style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important; outline: none !important; box-shadow: none !important;">
                 <span class="material-symbols-outlined text-[18px]">notifications</span>
                 @if(($notifCount ?? 0) > 0)
                     <span class="w-2 h-2 rounded-full bg-error absolute top-1.5 right-1.5"></span>
@@ -81,8 +96,10 @@
             </button>
 
             <!-- Notification Dropdown Menu -->
-            <div class="dropdown-menu dropdown-menu-end bg-card-surface border border-border-color rounded p-0 overflow-hidden w-80 shadow-none z-50">
-                <div class="px-4 py-2.5 border-b border-border-color flex justify-between items-center bg-dark-bg">
+            <div class="dropdown-menu dropdown-menu-end p-0 overflow-hidden w-80 shadow-none z-50"
+                 style="border: 1px solid #272C35 !important; background-color: #171A20 !important; border-radius: 6px !important;">
+                <div class="px-4 py-2.5 flex justify-between items-center"
+                     style="border-bottom: 1px solid #272C35 !important; background-color: #111419 !important;">
                     <span class="font-label-caps text-[10px] font-semibold text-on-surface uppercase tracking-wider">Notifications</span>
                     @if(($notifCount ?? 0) > 0)
                         <span class="text-[10px] px-1.5 py-0.5 rounded bg-error text-on-error font-bold leading-none">{{ $notifCount }}</span>
@@ -96,7 +113,9 @@
                     @php $hasAny = true; @endphp
                     <div class="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-on-surface-variant font-bold">Out of Stock</div>
                     @foreach($outOfStock as $p)
-                        <a class="dropdown-item flex items-center px-4 py-2 text-on-surface hover:bg-hover-surface text-body-sm no-underline border-b border-border-color/30" href="{{ route('products.index', ['stock' => 'out']) }}">
+                        <a class="dropdown-item flex items-center px-4 py-2 text-on-surface hover:bg-hover-surface text-body-sm no-underline" 
+                           style="border-bottom: 1px solid rgba(39, 44, 53, 0.4) !important;"
+                           href="{{ route('products.index', ['stock' => 'out']) }}">
                             <span class="material-symbols-outlined text-error text-[18px] mr-2">error</span>
                             <span class="flex-grow truncate">{{ Str::limit($p->name, 26) }}</span>
                             <span class="text-error font-mono tabular-nums text-[12px] ml-2">0 left</span>
@@ -109,7 +128,9 @@
                     @php $hasAny = true; @endphp
                     <div class="px-4 pt-2 pb-1 text-[10px] uppercase tracking-wider text-on-surface-variant font-bold">Low Stock</div>
                     @foreach($lowStock as $p)
-                        <a class="dropdown-item flex items-center px-4 py-2 text-on-surface hover:bg-hover-surface text-body-sm no-underline border-b border-border-color/30" href="{{ route('products.index', ['stock' => 'low']) }}">
+                        <a class="dropdown-item flex items-center px-4 py-2 text-on-surface hover:bg-hover-surface text-body-sm no-underline" 
+                           style="border-bottom: 1px solid rgba(39, 44, 53, 0.4) !important;"
+                           href="{{ route('products.index', ['stock' => 'low']) }}">
                             <span class="material-symbols-outlined text-amber-accent text-[18px] mr-2">warning</span>
                             <span class="flex-grow truncate">{{ Str::limit($p->name, 26) }}</span>
                             <span class="text-amber-accent font-mono tabular-nums text-[12px] ml-2">{{ $p->stock }} left</span>
@@ -124,7 +145,7 @@
                     </div>
                 @endif
 
-                <div class="border-t border-border-color p-2 bg-dark-bg/50">
+                <div class="p-2" style="border-top: 1px solid #272C35 !important; background-color: rgba(17, 20, 25, 0.5) !important;">
                     <a class="block text-center text-primary font-label-caps text-[10px] uppercase font-semibold hover:underline no-underline py-1" href="{{ route('products.index', ['stock' => 'low']) }}">
                         View Stock Alerts
                     </a>
@@ -134,11 +155,16 @@
 
         <!-- Settings Gear -->
         <div class="dropdown relative">
-            <button class="w-8 h-8 rounded border border-border-color flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-colors active:scale-95 cursor-pointer bg-transparent p-0" data-bs-toggle="dropdown" aria-expanded="false" title="Account Settings">
+            <button class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-95 cursor-pointer p-0" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false" 
+                    title="Account Settings"
+                    style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important; outline: none !important; box-shadow: none !important;">
                 <span class="material-symbols-outlined text-[18px]">settings</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end bg-card-surface border border-border-color rounded p-1 shadow-none min-w-[180px] z-50">
-                <li class="px-3 py-2 border-b border-border-color">
+            <ul class="dropdown-menu dropdown-menu-end p-1 shadow-none min-w-[180px] z-50"
+                style="border: 1px solid #272C35 !important; background-color: #171A20 !important; border-radius: 6px !important;">
+                <li class="px-3 py-2" style="border-bottom: 1px solid #272C35 !important;">
                     <div class="text-body-sm font-semibold text-on-surface">{{ Auth::user()->name ?? 'Admin' }}</div>
                     <div class="text-[11px] text-on-surface-variant truncate">{{ Auth::user()->email ?? 'admin@possystem.lk' }}</div>
                 </li>
@@ -152,7 +178,7 @@
                         <span class="material-symbols-outlined text-[18px] mr-2">tune</span> Settings
                     </a>
                 </li>
-                <li class="border-t border-border-color my-1"></li>
+                <li class="my-1" style="border-top: 1px solid #272C35 !important;"></li>
                 <li>
                     <form method="POST" action="{{ route('logout') }}" class="m-0">
                         @csrf
@@ -166,7 +192,8 @@
 
         <!-- User Avatar / Cashier Identity -->
         <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded bg-surface-variant border border-border-color overflow-hidden cursor-pointer hover:border-amber-accent transition-colors flex items-center justify-center text-on-surface font-metric-sm text-[12px] flex-shrink-0">
+            <div class="w-8 h-8 overflow-hidden cursor-pointer hover:border-amber-accent transition-colors flex items-center justify-center text-on-surface font-metric-sm text-[12px] flex-shrink-0"
+                 style="border: 1px solid #272C35 !important; background-color: #111419 !important; border-radius: 6px !important;">
                 @if(!empty(Auth::user()->avatar))
                     <img src="{{ asset(Auth::user()->avatar) }}" alt="Avatar" class="w-full h-full object-cover">
                 @else

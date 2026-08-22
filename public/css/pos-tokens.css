@@ -12,6 +12,9 @@
     --surface-muted: #2C3037;
     --surface-high: #37393E;
     --border-strong: #3E444D;
+    --border-color: #272C35;
+    --bs-border-color: #272C35;
+    --bs-border-color-translucent: rgba(39, 44, 53, 0.5);
     --on-surface: #E2E2E8;
     --on-surface-variant: #D7C3AE;
     --primary: #F5A524;
@@ -206,14 +209,14 @@ html, body {
     top: 0;
     left: 0;
     right: 0;
-    height: 64px !important;
-    min-height: 64px !important;
-    max-height: 64px !important;
-    background: var(--surface) !important;
-    border-bottom: 1px solid var(--surface-muted) !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    background: #0E1013 !important;
+    border-bottom: 1px solid #272C35 !important;
     box-shadow: none !important;
     z-index: 1040;
-    padding: 0 24px !important;
+    padding: 0 16px !important;
     display: flex !important;
     align-items: center !important;
     width: 100% !important;
@@ -221,24 +224,25 @@ html, body {
     border-radius: 0 !important;
 }
 
-.pos-navbar .sidebar-toggle-btn {
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: var(--radius-default) !important;
-    border: none !important;
-    background: transparent !important;
-    color: var(--on-surface-variant) !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s;
-    cursor: pointer;
+.pos-navbar #sidebarToggle,
+.pos-navbar .sidebar-toggle-btn,
+.pos-navbar .nav-icon-btn,
+.pos-navbar .dropdown > button,
+.pos-navbar #product-search,
+.pos-navbar #dashboard-global-search {
+    border: 1px solid #272C35 !important;
+    background-color: #111419 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
-.pos-navbar .sidebar-toggle-btn:hover {
-    background: var(--color-surface-container-high) !important;
-    border-color: var(--color-outline-variant) !important;
-    color: var(--color-primary) !important;
+.pos-navbar #sidebarToggle:hover,
+.pos-navbar .sidebar-toggle-btn:hover,
+.pos-navbar .nav-icon-btn:hover,
+.pos-navbar .dropdown > button:hover {
+    background-color: #1E222A !important;
+    border-color: #3E444D !important;
 }
 
 /* Topbar Center Search */

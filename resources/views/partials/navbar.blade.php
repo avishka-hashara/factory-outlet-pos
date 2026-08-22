@@ -62,24 +62,13 @@
     <!-- 3. STATUS CLUSTER (Right Zone, borderless text, 24px gaps) -->
     <div class="flex items-center gap-6 flex-shrink-0">
         
-        <!-- a. Register #04 (collapses 2nd) -->
-        <span class="hidden lg:inline-block text-[14px] text-on-surface-variant whitespace-nowrap">
-            Register #04
-        </span>
-
-        <!-- b. Live clock, HH:MM:SS 24-hour, tabular-nums -->
+        <!-- a. Live clock, HH:MM:SS 24-hour, tabular-nums -->
         <span id="pos-live-clock" class="text-[14px] font-mono tabular-nums text-on-surface-variant whitespace-nowrap">
             {{ now()->format('H:i:s') }}
         </span>
 
-        <!-- c. Sync status dot + Sync label -->
-        <button id="global-sync-btn" type="button" onclick="triggerGlobalSync()" class="bg-transparent border-0 p-0 flex items-center gap-1.5 cursor-pointer text-on-surface-variant hover:text-on-surface transition-colors" title="Sync Products & Collections from Shopify">
-            <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-success flex-shrink-0 inline-block"></span>
-            <span class="text-label-caps uppercase text-on-surface-variant font-bold tracking-widest leading-none">Sync</span>
-        </button>
-
-        <!-- d. Date (collapses 1st) -->
-        <span class="hidden xl:inline-block text-[14px] text-on-surface-variant tabular-nums whitespace-nowrap" id="current-date">
+        <!-- b. Date -->
+        <span class="hidden md:inline-block text-[14px] text-on-surface-variant tabular-nums whitespace-nowrap" id="current-date">
             {{ now()->format('D, M d Y') }}
         </span>
 

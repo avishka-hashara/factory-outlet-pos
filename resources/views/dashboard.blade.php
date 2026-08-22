@@ -4,7 +4,7 @@
 @push('styles')
 <style>
     /* ========================================================
-       DASHBOARD CARD CUSTOMIZATION VARIABLES
+       DASHBOARD CARD & CONTROL CUSTOMIZATION VARIABLES
        Adjust border color, width, radius, and background here:
        ======================================================== */
     :root {
@@ -13,6 +13,7 @@
         --dash-card-border: #272C35;       /* Border Color (Hex: #272C35 | RGB: 39,44,53 | HSL: 219,15%,18%) */
         --dash-card-border-width: 1px;     /* Border Width */
         --dash-card-radius: 8px;           /* Corner Radius */
+        --dash-control-radius: 6px;        /* Range selector & Export button Radius */
     }
 
     .dashboard-card {
@@ -21,9 +22,23 @@
         border-radius: var(--dash-card-radius) !important;
         box-sizing: border-box !important;
         box-shadow: none !important;
+        outline: none !important;
     }
 
     .dashboard-card:hover {
+        background-color: var(--dash-card-hover-bg) !important;
+    }
+
+    .dashboard-control {
+        background-color: #111419 !important;
+        border: var(--dash-card-border-width) solid var(--dash-card-border) !important;
+        border-radius: var(--dash-control-radius) !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .dashboard-control:hover {
         background-color: var(--dash-card-hover-bg) !important;
     }
 </style>

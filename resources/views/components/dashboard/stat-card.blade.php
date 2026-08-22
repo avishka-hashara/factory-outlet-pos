@@ -9,8 +9,7 @@
     'fieldKey' => '',
 ])
 
-<div class="group relative overflow-hidden flex flex-col justify-between select-none cursor-default transition-colors duration-200 box-border rounded-[8px] p-[10px] lg:p-[12px] bg-[#171A20] hover:bg-[#1E222A] border-0"
-     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
+<div class="dashboard-card group relative overflow-hidden flex flex-col justify-between select-none cursor-default transition-colors duration-200 box-border rounded-[8px] p-[10px] lg:p-[12px] bg-[#171A20] hover:bg-[#1E222A] border border-[#272C35]">
     
     @if($isPrimary)
         <!-- a) Top accent bar: 2px height, #F5A623 -->

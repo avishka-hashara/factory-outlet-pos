@@ -26,8 +26,7 @@
     $rot3 = (($pct1 + $pct2) / 100) * 360;
 @endphp
 
-<div class="lg:col-span-4 flex flex-col justify-between min-h-[310px] select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border-0"
-     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
+<div class="dashboard-card lg:col-span-4 flex flex-col justify-between min-h-[310px] select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border border-[#272C35]">
     
     <!-- Card Header -->
     <div class="flex justify-between items-center mb-1">

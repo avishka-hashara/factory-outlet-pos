@@ -1,7 +1,6 @@
 @props(['stockAlerts' => []])
 
-<div class="flex flex-col justify-between select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border-0 min-h-[145px]"
-     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
+<div class="dashboard-card flex flex-col justify-between select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border border-[#272C35] min-h-[145px]">
     <div class="flex justify-between items-center mb-2">
         <div class="flex items-center gap-2">
             <h2 class="font-headline-md text-[13px] lg:text-[14px] text-on-surface m-0 font-semibold tracking-tight">Stock Alerts</h2>

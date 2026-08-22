@@ -1,7 +1,6 @@
 @props(['drawerStatus' => []])
 
-<div class="flex flex-col justify-between relative overflow-hidden select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border-0 min-h-[145px]"
-     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
+<div class="dashboard-card flex flex-col justify-between relative overflow-hidden select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border border-[#272C35] min-h-[145px]">
     
     <!-- Top Row: Drawer Status + OPEN badge + EXPECTED CASH -->
     <div class="relative z-10 flex justify-between items-start">

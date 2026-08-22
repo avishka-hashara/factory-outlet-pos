@@ -4,59 +4,84 @@
    ========================================================= */
 
 :root {
-    /* ---- Colors: Surface Architecture ---- */
-    --color-surface: #111317;
+    /* =========================================
+       LUMEN TERMINAL CORE PALETTE (TASK SPEC)
+       ========================================= */
+    --background: #14161A;
+    --surface: #1E2126;
+    --surface-muted: #2C3037;
+    --surface-high: #37393E;
+    --border-strong: #3E444D;
+    --on-surface: #E2E2E8;
+    --on-surface-variant: #D7C3AE;
+    --primary: #F5A524;
+    --primary-text: #FFC77F;
+    --on-primary: #14161A;
+    --success: #4AE176;
+    --error: #FFB4AB;
+    --error-solid: #EF4444;
+
+    /* Spacing & Touch Tokens */
+    --touch-target-min: 56px;
+    --panel-padding: 24px;
+    --safe-margin: 16px;
+    --stack-gap: 8px;
+    --grid-gutter: 1px;
+
+    /* Radius Tokens */
+    --radius-sm: 4px;
+    --radius-default: 8px;
+    --radius-full: 9999px;
+
+    /* Legacy / Compatibility Mapping */
+    --color-surface: var(--surface);
     --color-surface-dim: #111317;
-    --color-surface-bright: #37393e;
+    --color-surface-bright: var(--surface-high);
     --color-surface-container-lowest: #0c0e12;
     --color-surface-container-low: #1a1c20;
-    --color-surface-container: #1e2024;
-    --color-surface-container-high: #282a2e;
-    --color-surface-container-highest: #333539;
-    --color-surface-variant: #333539;
+    --color-surface-container: var(--surface);
+    --color-surface-container-high: var(--surface-muted);
+    --color-surface-container-highest: var(--surface-high);
+    --color-surface-variant: var(--surface-muted);
 
-    --color-background: #111317;
-    --color-on-background: #e2e2e8;
-    --color-on-surface: #e2e2e8;
-    --color-on-surface-variant: #d7c3ae;
+    --color-background: var(--background);
+    --color-on-background: var(--on-surface);
+    --color-on-surface: var(--on-surface);
+    --color-on-surface-variant: var(--on-surface-variant);
     --color-inverse-surface: #e2e2e8;
     --color-inverse-on-surface: #2f3035;
 
     --color-outline: #9f8e7a;
     --color-outline-variant: #524434;
-    --color-border-grid: #282a2e;
-    --color-border-subtle: #333539;
+    --color-border-grid: var(--surface-muted);
+    --color-border-subtle: var(--surface-muted);
 
-    /* ---- Colors: Primary (Amber / Gold Accent) ---- */
     --color-surface-tint: #ffb957;
-    --color-primary: #ffc77f;
-    --color-on-primary: #462b00;
-    --color-primary-container: #f5a524;
-    --color-on-primary-container: #111317;
+    --color-primary: var(--primary-text);
+    --color-on-primary: var(--on-primary);
+    --color-primary-container: var(--primary);
+    --color-on-primary-container: var(--on-primary);
     --color-inverse-primary: #835400;
     --color-primary-fixed: #ffddb5;
     --color-primary-fixed-dim: #ffb957;
     --color-on-primary-fixed: #2a1800;
     --color-on-primary-fixed-variant: #643f00;
 
-    /* ---- Colors: Secondary (Green / Success) ---- */
-    --color-secondary: #4ae176;
+    --color-secondary: var(--success);
     --color-on-secondary: #003915;
     --color-secondary-container: #00b954;
     --color-on-secondary-container: #004119;
     --color-secondary-fixed: #6bff8f;
-    --color-secondary-fixed-dim: #4ae176;
+    --color-secondary-fixed-dim: var(--success);
     --color-on-secondary-fixed: #002109;
     --color-on-secondary-fixed-variant: #005321;
 
-    /* ---- Colors: Tertiary & Info ---- */
     --color-tertiary: #ffc3be;
     --color-on-tertiary: #68000a;
     --color-tertiary-container: #ff9a93;
     --color-on-tertiary-container: #930013;
 
-    /* ---- Colors: Error / Destructive (Red) ---- */
-    --color-error: #ef4444;
+    --color-error: var(--error-solid);
     --color-on-error: #690005;
     --color-error-container: rgba(239, 68, 68, 0.25);
     --color-on-error-container: #ffdad6;
@@ -716,11 +741,11 @@ html, body {
     }
 }
 
-/* Dark Industrial Product Tile Card (Section 2) */
+/* Dark Industrial Product Tile Card (Section 2 - Lumen Terminal) */
 .prod-card {
-    background: var(--color-surface-container) !important;
-    border: 1px solid var(--color-surface-container-highest) !important;
-    border-radius: var(--radius-default) !important;
+    background: #1E2126 !important;
+    border: 1px solid #2C3037 !important;
+    border-radius: 8px !important;
     cursor: pointer !important;
     overflow: hidden !important;
     display: flex !important;
@@ -728,11 +753,12 @@ html, body {
     position: relative !important;
     transition: border-color 0.15s, background 0.15s !important;
     box-shadow: none !important;
+    user-select: none !important;
 }
 
 .prod-card:hover {
-    border-color: var(--color-primary-container) !important;
-    background: var(--color-surface-container-high) !important;
+    border-color: #F5A524 !important;
+    background: #23272e !important;
 }
 
 .prod-card.out-of-stock {
@@ -743,7 +769,8 @@ html, body {
 .prod-img {
     width: 100% !important;
     height: 140px !important;
-    background: var(--color-surface-container-high) !important;
+    background: #17191E !important;
+    border-bottom: 1px solid #2C3037 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -755,42 +782,60 @@ html, body {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+    transition: transform 0.2s ease !important;
+}
+
+.prod-card:hover .prod-img img {
+    transform: scale(1.04);
 }
 
 .prod-img i {
     font-size: 2.2rem !important;
-    color: var(--color-primary) !important;
-    opacity: 0.35 !important;
+    color: #555C68 !important;
+    transition: color 0.15s !important;
+}
+
+.prod-card:hover .prod-img i {
+    color: #F5A524 !important;
 }
 
 .prod-stock-badge {
     position: absolute !important;
-    top: 6px !important;
-    right: 6px !important;
-    background: rgba(12, 14, 18, 0.88) !important;
-    border: 1px solid var(--color-surface-container-highest) !important;
-    color: var(--color-primary) !important;
-    padding: 2px 6px !important;
-    border-radius: var(--radius-sm) !important;
-    font-size: 0.6rem !important;
+    top: 8px !important;
+    right: 8px !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 1px solid rgba(245, 165, 36, 0.35) !important;
+    color: #F5A524 !important;
+    padding: 2px 7px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
     font-weight: 700 !important;
-    letter-spacing: 0.04em !important;
+    letter-spacing: 0.06em !important;
     text-transform: uppercase !important;
     z-index: 2 !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+.prod-stock-badge.low-stock,
+.prod-stock-badge.out-of-stock {
+    border-color: rgba(255, 180, 171, 0.4) !important;
+    color: #ffb4ab !important;
 }
 
 .prod-info {
-    padding: 8px 10px !important;
+    padding: 10px 12px !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 2px !important;
+    gap: 3px !important;
     background: transparent !important;
+    flex: 1 !important;
+    justify-content: space-between !important;
 }
 
 .prod-name {
-    font-size: 0.82rem !important;
-    font-weight: 700 !important;
-    color: var(--color-on-surface) !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #FFFFFF !important;
     line-height: 1.25 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -798,18 +843,18 @@ html, body {
 }
 
 .prod-sku {
-    font-size: 0.68rem !important;
-    color: var(--color-outline) !important;
+    font-size: 0.72rem !important;
+    color: #9CA3AF !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
 }
 
 .prod-price-tag {
-    margin-top: 2px !important;
-    font-size: 0.92rem !important;
-    font-weight: 800 !important;
-    color: var(--color-primary-container) !important;
+    margin-top: 4px !important;
+    font-size: 0.98rem !important;
+    font-weight: 700 !important;
+    color: #FFFFFF !important;
     font-feature-settings: var(--font-feature-tabular) !important;
 }
 

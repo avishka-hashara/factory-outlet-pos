@@ -11,14 +11,21 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Inter & Material Symbols Outlined -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+    <!-- Vite (Tailwind CSS + JS) -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <!-- Custom POS Tokens & Theme CSS -->
     <link href="{{ asset('css/pos-theme.css') }}" rel="stylesheet">
     <link href="{{ asset('css/pos-tokens.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
-<body>
+<body class="h-screen w-screen overflow-hidden bg-background text-on-surface font-sans">
     <!-- Top Navbar (reuse existing partial) -->
     @include('partials.navbar')
 

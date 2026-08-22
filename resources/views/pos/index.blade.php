@@ -68,6 +68,15 @@ Matches DESIGN.md + Stitch Terminal Mockup
                                 'image_url' => $v->image_url,
                             ];
                         })->values()->toArray();
+
+                        $firstVariant = $product->variants->first();
+                        $metaLabel = $firstVariant 
+                            ? trim(($firstVariant->color ? $firstVariant->color : '') . ($firstVariant->size ? ' / ' . $firstVariant->size : ''), ' / ')
+                            : ($product->category ?? 'Standard');
+                        $skuLabel = $product->sku ?? ($firstVariant->sku ?? 'N/A');
+
+                        $isLowStock = $product->stock > 0 && $product->stock <= 5;
+                        $isOutOfStock = $product->stock <= 0;
                     @endphp
                     <div class="product-item"
                         data-name="{{ strtolower($product->name) }}"
@@ -76,21 +85,23 @@ Matches DESIGN.md + Stitch Terminal Mockup
                         data-category="{{ strtolower($product->category ?? '') }}"
                         data-source="{{ $product->shopify_id ? 'shopify' : 'local' }}">
 
-                        <div class="prod-card{{ $product->stock <= 0 ? ' out-of-stock' : '' }}"
+                        <div class="prod-card{{ $isOutOfStock ? ' out-of-stock' : '' }}"
                             data-id="{{ $product->id }}"
                             data-name="{{ $product->name }}"
                             data-price="{{ $product->price }}"
                             data-stock="{{ $product->stock }}"
-                            data-sku="{{ $product->sku ?? 'N/A' }}"
+                            data-sku="{{ $skuLabel }}"
                             data-image="{{ $product->image_url ?? '' }}"
                             data-variants='@json($variantData)'
                             onclick="handleProductClick(this)">
                             
                             <div class="prod-img">
-                                @if($product->stock > 0)
-                                    <span class="prod-stock-badge">{{ $product->stock }} IN STOCK</span>
+                                @if($isOutOfStock)
+                                    <span class="prod-stock-badge out-of-stock">OUT OF STOCK</span>
+                                @elseif($isLowStock)
+                                    <span class="prod-stock-badge low-stock">{{ $product->stock }} IN STOCK</span>
                                 @else
-                                    <span class="prod-stock-badge" style="color:var(--color-error);border-color:var(--color-error-container);">OUT OF STOCK</span>
+                                    <span class="prod-stock-badge">{{ $product->stock }} IN STOCK</span>
                                 @endif
                                 
                                 @if($product->image_url)
@@ -100,8 +111,10 @@ Matches DESIGN.md + Stitch Terminal Mockup
                                 @endif
                             </div>
                             <div class="prod-info">
-                                <div class="prod-name" title="{{ $product->name }}">{{ $product->name }}</div>
-                                <div class="prod-sku">{{ $product->sku ?? 'N/A' }}</div>
+                                <div>
+                                    <div class="prod-name" title="{{ $product->name }}">{{ $product->name }}</div>
+                                    <div class="prod-sku">{{ $metaLabel }} • SKU: {{ $skuLabel }}</div>
+                                </div>
                                 <div class="prod-price-tag">Rs. {{ number_format($product->price, 2) }}</div>
                             </div>
                         </div>
@@ -109,18 +122,18 @@ Matches DESIGN.md + Stitch Terminal Mockup
                 @empty
                     @php
                         $sampleProducts = [
-                            ['id'=>1,'name'=>'Classic Cotton Crewneck Tee - Black','sku'=>'TSH-BLK-M','price'=>2450,'stock'=>25,'category'=>'Men'],
-                            ['id'=>2,'name'=>'Slim Fit Chino Trousers - Navy','sku'=>'CHN-NVY-32','price'=>4850,'stock'=>15,'category'=>'Men'],
-                            ['id'=>3,'name'=>'Oxford Long Sleeve Shirt - White','sku'=>'SHT-WHT-L','price'=>5200,'stock'=>18,'category'=>'Men'],
-                            ['id'=>4,'name'=>'Oversized Heavyweight Hoodie - Grey','sku'=>'HD-GRY-XL','price'=>6500,'stock'=>12,'category'=>'Unisex'],
-                            ['id'=>5,'name'=>'Vintage Wash Denim Jacket - Blue','sku'=>'JKT-BLU-L','price'=>8900,'stock'=>8,'category'=>'Outerwear'],
-                            ['id'=>6,'name'=>'Relaxed Linen Blend Shorts - Beige','sku'=>'SHT-BEI-M','price'=>3200,'stock'=>20,'category'=>'Bottoms'],
-                            ['id'=>7,'name'=>'Floral Summer Wrap Dress - Red','sku'=>'DRS-RED-S','price'=>5900,'stock'=>10,'category'=>'Women'],
-                            ['id'=>8,'name'=>'Premium Pique Polo Shirt - Emerald','sku'=>'POLO-GRN-L','price'=>3800,'stock'=>14,'category'=>'Men'],
-                            ['id'=>9,'name'=>'High-Rise Straight Jeans - Light Wash','sku'=>'JNS-LGT-28','price'=>6200,'stock'=>11,'category'=>'Women'],
-                            ['id'=>10,'name'=>'Kids Graphic Print Tee - Yellow','sku'=>'KID-YEL-06','price'=>1850,'stock'=>22,'category'=>'Kids'],
-                            ['id'=>11,'name'=>'Ribbed Knit Crop Top - Olive','sku'=>'TOP-OLV-M','price'=>2900,'stock'=>16,'category'=>'Women'],
-                            ['id'=>12,'name'=>'Classic Leather Belt - Brown','sku'=>'ACC-BLT-BRN','price'=>2200,'stock'=>30,'category'=>'Accessories'],
+                            ['id'=>1,'name'=>'Classic Cotton Crewneck Tee - Black','sku'=>'TSH-BLK-M','meta'=>'M / Black','price'=>2450,'stock'=>25,'category'=>'Men'],
+                            ['id'=>2,'name'=>'Slim Fit Chino Trousers - Navy','sku'=>'CHN-NVY-32','meta'=>'32 / Navy','price'=>4850,'stock'=>15,'category'=>'Men'],
+                            ['id'=>3,'name'=>'Oxford Long Sleeve Shirt - White','sku'=>'SHT-WHT-L','meta'=>'L / White','price'=>5200,'stock'=>18,'category'=>'Men'],
+                            ['id'=>4,'name'=>'Oversized Heavyweight Hoodie - Grey','sku'=>'HD-GRY-XL','meta'=>'XL / Grey','price'=>6500,'stock'=>12,'category'=>'Unisex'],
+                            ['id'=>5,'name'=>'Vintage Wash Denim Jacket - Blue','sku'=>'JKT-BLU-L','meta'=>'L / Indigo','price'=>8900,'stock'=>8,'category'=>'Outerwear'],
+                            ['id'=>6,'name'=>'Relaxed Linen Blend Shorts - Beige','sku'=>'SHT-BEI-M','meta'=>'M / Beige','price'=>3200,'stock'=>20,'category'=>'Bottoms'],
+                            ['id'=>7,'name'=>'Floral Summer Wrap Dress - Red','sku'=>'DRS-RED-S','meta'=>'S / Red','price'=>5900,'stock'=>10,'category'=>'Women'],
+                            ['id'=>8,'name'=>'Premium Pique Polo Shirt - Emerald','sku'=>'POLO-GRN-L','meta'=>'L / Emerald','price'=>3800,'stock'=>14,'category'=>'Men'],
+                            ['id'=>9,'name'=>'High-Rise Straight Jeans - Light Wash','sku'=>'JNS-LGT-28','meta'=>'28 / Light Wash','price'=>6200,'stock'=>11,'category'=>'Women'],
+                            ['id'=>10,'name'=>'Kids Graphic Print Tee - Yellow','sku'=>'KID-YEL-06','meta'=>'6Y / Yellow','price'=>1850,'stock'=>22,'category'=>'Kids'],
+                            ['id'=>11,'name'=>'Ribbed Knit Crop Top - Olive','sku'=>'TOP-OLV-M','meta'=>'M / Olive','price'=>2900,'stock'=>16,'category'=>'Women'],
+                            ['id'=>12,'name'=>'Classic Leather Belt - Brown','sku'=>'ACC-BLT-BRN','meta'=>'OS / Brown','price'=>2200,'stock'=>30,'category'=>'Accessories'],
                         ];
                     @endphp
                     @foreach($sampleProducts as $p)
@@ -128,14 +141,16 @@ Matches DESIGN.md + Stitch Terminal Mockup
                             data-sku="{{ strtolower($p['sku']) }}" data-collections="" data-source="local" data-category="{{ $p['category'] }}">
                             <div class="prod-card" data-id="{{ $p['id'] }}" data-name="{{ $p['name'] }}"
                                 data-price="{{ $p['price'] }}" data-stock="{{ $p['stock'] }}" data-sku="{{ $p['sku'] }}"
-                                data-variants='[]' onclick="addToCart(this)">
+                                data-variants='[]' onclick="handleProductClick(this)">
                                 <div class="prod-img">
                                     <span class="prod-stock-badge">{{ $p['stock'] }} IN STOCK</span>
                                     <i class="fas fa-tshirt"></i>
                                 </div>
                                 <div class="prod-info">
-                                    <div class="prod-name">{{ $p['name'] }}</div>
-                                    <div class="prod-sku">{{ $p['sku'] }}</div>
+                                    <div>
+                                        <div class="prod-name" title="{{ $p['name'] }}">{{ $p['name'] }}</div>
+                                        <div class="prod-sku">{{ $p['meta'] }} • SKU: {{ $p['sku'] }}</div>
+                                    </div>
                                     <div class="prod-price-tag">Rs. {{ number_format($p['price'], 2) }}</div>
                                 </div>
                             </div>

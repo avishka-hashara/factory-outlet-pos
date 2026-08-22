@@ -25,12 +25,12 @@
     <link href="{{ asset('css/pos-tokens.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
-<body class="h-screen w-screen overflow-hidden bg-background text-on-surface font-sans">
+<body class="h-screen w-screen overflow-hidden bg-background text-on-surface font-sans flex flex-col m-0 p-0">
     <!-- Top Navbar (reuse existing partial) -->
     @include('partials.navbar')
 
     <!-- POS App Container -->
-    <div id="pos-app">
+    <div id="pos-app" class="flex-1 flex overflow-hidden min-h-0 w-full">
         <!-- Left Icon Rail (~88px) -->
         <nav id="pos-icon-rail" aria-label="POS Navigation Rail">
             <div class="rail-nav">

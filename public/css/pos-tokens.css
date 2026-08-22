@@ -182,65 +182,55 @@ html, body {
 }
 
 #pos-app {
-    position: fixed;
-    top: 56px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: calc(100vh - 56px);
-    display: flex;
-    flex-direction: row;
-    background: var(--color-background);
-    overflow: hidden;
-}
-
-/* =========================================================
-   TOP BAR (SECTION 8)
-   ========================================================= */
-.pos-navbar {
-    position: fixed;
+    position: relative;
     top: 0;
     left: 0;
     right: 0;
-    height: 56px !important;
-    background: var(--color-surface) !important;
-    border-bottom: 1px solid var(--color-border-grid) !important;
-    box-shadow: var(--elevation-none) !important;
-    z-index: 1040;
-    padding: 0 16px !important;
+    bottom: 0;
+    height: calc(100vh - 64px);
+    flex: 1 1 0%;
+    min-height: 0;
     display: flex;
-    align-items: center;
+    flex-direction: row;
+    background: var(--background);
+    overflow: hidden;
+    width: 100%;
 }
 
-.pos-navbar .navbar-brand {
-    font-family: var(--font-family-base) !important;
-    font-weight: 700 !important;
-    letter-spacing: var(--type-label-caps-tracking);
-    text-transform: uppercase;
-    margin: 0;
-    padding: 0;
-}
-
-.pos-navbar .brand-text {
-    color: var(--color-primary-container) !important;
-    background: none !important;
-    -webkit-text-fill-color: var(--color-primary-container) !important;
-    font-size: 1.15rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 1px !important;
+/* =========================================================
+   TOP BAR (SECTION 8) - LUMEN TERMINAL
+   ========================================================= */
+.pos-navbar {
+    position: relative !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px !important;
+    min-height: 64px !important;
+    max-height: 64px !important;
+    background: var(--surface) !important;
+    border-bottom: 1px solid var(--surface-muted) !important;
+    box-shadow: none !important;
+    z-index: 1040;
+    padding: 0 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    border-radius: 0 !important;
 }
 
 .pos-navbar .sidebar-toggle-btn {
     width: 40px !important;
     height: 40px !important;
     border-radius: var(--radius-default) !important;
-    border: 1px solid var(--color-surface-container-highest) !important;
-    background: var(--color-surface-container-low) !important;
-    color: var(--color-on-surface) !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--on-surface-variant) !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s;
     cursor: pointer;
 }
 

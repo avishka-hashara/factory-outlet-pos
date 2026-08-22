@@ -1,203 +1,203 @@
 <!-- ============================================
-     Left Sidebar - Jewellery POS System
+     Lumen Terminal — Hamburger Drawer Overlay
+     Full-Route Map Overlay, Restyled with Design Tokens
      ============================================ -->
-<div id="sidebar" class="pos-sidebar">
-    <div class="sidebar-inner">
-        <!-- Mobile Header with Close Button -->
-        <div class="sidebar-mobile-header d-lg-none">
-            <div class="d-flex align-items-center">
-                <img src="{{ !empty($systemLogo) ? asset($systemLogo) : asset('images/bc-logo.png') }}" alt="Logo" style="max-width:32px;height:auto;filter:drop-shadow(0 2px 4px rgba(245,166,35,0.2));" class="me-2">
-                <span style="font-family:'Inter',sans-serif;font-size:1.05rem;font-weight:700;background:linear-gradient(135deg,#F7B84D,#FCCF6E);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">{{ \App\Models\Setting::get('app_name', config('app.name', 'Clothing Outlet POS')) }}</span>
-            </div>
-            <button class="sidebar-close-btn" id="sidebarClose" aria-label="Close sidebar">
-                <i class="fas fa-times"></i>
-            </button>
+@php $u = auth()->user(); @endphp
+
+<!-- Backdrop Overlay: Flat 60% opacity background, no blur -->
+<div id="pos-sidebar-overlay" class="pos-drawer-backdrop" onclick="posSidebarClose()"></div>
+
+<!-- Slideout Drawer Panel: 280px wide -->
+<aside id="pos-sidebar-panel" class="pos-drawer-overlay-panel" aria-label="Full Navigation Drawer">
+    <!-- Header with Branding + Close Button -->
+    <div class="drawer-header flex items-center justify-between px-4 h-[64px] border-b border-surface-muted bg-surface flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="text-primary text-[20px] font-[900] tracking-tight" style="color: var(--primary) !important;">
+                {{ \App\Models\Setting::get('app_name', config('app.name', 'LARAVEL')) }}
+            </span>
+            <span class="text-on-surface-variant text-[12px]">Menu</span>
         </div>
+        <button type="button" 
+                onclick="posSidebarClose()" 
+                class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-high border-0 bg-transparent cursor-pointer p-0"
+                title="Close Drawer">
+            <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+    </div>
 
-        <hr class="sidebar-divider mx-3 opacity-25 mt-2">
+    <!-- Scrollable Navigation Groups -->
+    <div class="flex-1 overflow-y-auto overflow-x-hidden py-2" style="scrollbar-width: none;">
+        <ul class="m-0 p-0 list-none">
 
-        <!-- Navigation Menu -->
-        {{-- Grouped navigation. Section headers are visual labels only (not
-             links). Each item keeps its exact route, icon, label and permission
-             gate; a group's header is only shown when at least one of its items
-             is visible to the current user. --}}
-        @php $u = auth()->user(); @endphp
-        <ul class="nav flex-column px-2">
-
-            {{-- ===== MAIN ===== --}}
-            @if($u?->canAccess('dashboard') || $u?->canAccess('pos'))
-            <li class="sidebar-heading"><span class="nav-text">Main</span></li>
+            {{-- ===== 1. MAIN ===== --}}
+            @if(!$u || $u->canAccess('dashboard') || $u->canAccess('pos'))
+            <li class="drawer-heading">Main</li>
             @endif
 
             <!-- Dashboard -->
-            @if(auth()->user()?->canAccess('dashboard'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                    href="{{ route('dashboard') }}">
-                    <i class="fas fa-tachometer-alt me-2"></i>
-                    <span class="nav-text">Dashboard</span>
+            @if(!$u || $u->canAccess('dashboard'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('dashboard') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
                 </a>
             </li>
             @endif
 
             <!-- POS Billing -->
-            @if(auth()->user()?->canAccess('pos'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('pos.index') ? 'active' : '' }}"
-                    href="{{ route('pos.index') }}">
-                    <i class="fas fa-cash-register me-2"></i>
-                    <span class="nav-text">POS Billing</span>
+            @if(!$u || $u->canAccess('pos'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('pos.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('pos.index') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <span>POS Billing</span>
                 </a>
             </li>
             @endif
 
-            {{-- ===== SALES ===== --}}
-            @if($u?->canAccess('pos_log') || $u?->canAccess('sales') || $u?->canAccess('returns') || $u?->canAccess('cash_drawer'))
-            <li class="sidebar-heading"><span class="nav-text">Sales</span></li>
+            {{-- ===== 2. SALES ===== --}}
+            @if(!$u || $u->canAccess('pos_log') || $u->canAccess('sales') || $u->canAccess('returns') || $u->canAccess('cash_drawer'))
+            <li class="drawer-heading">Sales</li>
             @endif
 
             <!-- POS Sales Log -->
-            @if(auth()->user()?->canAccess('pos_log'))
-                <li class="nav-item mb-1">
-                    <a class="nav-link {{ request()->routeIs('pos.log') ? 'active' : '' }}" href="{{ route('pos.log') }}">
-                        <i class="fas fa-store me-2"></i>
-                        <span class="nav-text">POS Sales Log</span>
-                    </a>
-                </li>
+            @if(!$u || $u->canAccess('pos_log'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('pos.log') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('pos.log') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">store</span>
+                    <span>POS Sales Log</span>
+                </a>
+            </li>
             @endif
 
             <!-- Sales History -->
-            @if(auth()->user()?->canAccess('sales'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('sales.*') ? 'active' : '' }}"
-                    href="{{ route('sales.index') }}">
-                    <i class="fas fa-receipt me-2"></i>
-                    <span class="nav-text">Sales History</span>
+            @if(!$u || $u->canAccess('sales'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('sales.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('sales.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    <span>Sales History</span>
                 </a>
             </li>
             @endif
 
             <!-- Returns & Refunds -->
-            @if(auth()->user()?->canAccess('returns'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('returns.*') ? 'active' : '' }}"
-                    href="{{ route('returns.index') }}">
-                    <i class="fas fa-undo-alt me-2"></i>
-                    <span class="nav-text">Returns & Refunds</span>
+            @if(!$u || $u->canAccess('returns'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('returns.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('returns.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">assignment_return</span>
+                    <span>Returns & Refunds</span>
                 </a>
             </li>
             @endif
 
             <!-- Cash Drawer -->
-            @if(auth()->user()?->canAccess('cash_drawer'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('cash-drawer.*') ? 'active' : '' }}"
-                    href="{{ route('cash-drawer.index') }}">
-                    <i class="fas fa-cash-register me-2"></i>
-                    <span class="nav-text">Cash Drawer</span>
+            @if(!$u || $u->canAccess('cash_drawer'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('cash-drawer.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('cash-drawer.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">wallet</span>
+                    <span>Cash Drawer</span>
                 </a>
             </li>
             @endif
 
-            {{-- ===== INVENTORY ===== --}}
-            @if($u?->canAccess('products') || $u?->canAccess('gift_cards'))
-            <li class="sidebar-heading"><span class="nav-text">Inventory</span></li>
+            {{-- ===== 3. INVENTORY ===== --}}
+            @if(!$u || $u->canAccess('products') || $u->canAccess('gift_cards'))
+            <li class="drawer-heading">Inventory</li>
             @endif
 
             <!-- Products -->
-            @if(auth()->user()?->canAccess('products'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}"
-                    href="{{ route('products.index') }}">
-                    <i class="fas fa-tshirt me-2"></i>
-                    <span class="nav-text">Products</span>
+            @if(!$u || $u->canAccess('products'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('products.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                    <span>Products</span>
                 </a>
             </li>
             @endif
 
-            <!-- Gift Cards (admin/manager) -->
-            @if(auth()->user()?->canAccess('gift_cards'))
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('gift-cards.*') ? 'active' : '' }}"
-                    href="{{ route('gift-cards.index') }}">
-                    <i class="fas fa-gift me-2"></i>
-                    <span class="nav-text">Gift Cards</span>
+            <!-- Gift Cards -->
+            @if(!$u || $u->canAccess('gift_cards'))
+            <li class="drawer-nav-item">
+                <a href="{{ route('gift-cards.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('gift-cards.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">redeem</span>
+                    <span>Gift Cards</span>
                 </a>
             </li>
             @endif
 
-            {{-- ===== CUSTOMERS ===== --}}
-            <li class="sidebar-heading"><span class="nav-text">Customers</span></li>
-
-            <!-- Customers -->
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}"
-                    href="{{ route('customers.index') }}">
-                    <i class="fas fa-users me-2"></i>
-                    <span class="nav-text">Customers</span>
+            {{-- ===== 4. CUSTOMERS ===== --}}
+            <li class="drawer-heading">Customers</li>
+            <li class="drawer-nav-item">
+                <a href="{{ route('customers.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('customers.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">group</span>
+                    <span>Customers</span>
                 </a>
             </li>
 
-            {{-- ===== REPORTS ===== --}}
-            @if(auth()->user()?->canAccess('reports'))
-            <li class="sidebar-heading"><span class="nav-text">Reports</span></li>
-
-            <!-- Reports -->
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"
-                    href="{{ route('reports.index') }}">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    <span class="nav-text">Reports</span>
+            {{-- ===== 5. REPORTS ===== --}}
+            @if(!$u || $u->canAccess('reports'))
+            <li class="drawer-heading">Reports</li>
+            <li class="drawer-nav-item">
+                <a href="{{ route('reports.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span>Reports</span>
                 </a>
             </li>
             @endif
 
-            {{-- ===== ADMIN ===== --}}
-            @if(auth()->user()?->isAdmin())
-            <li class="sidebar-heading"><span class="nav-text">Admin</span></li>
+            {{-- ===== 6. ADMIN ===== --}}
+            @if(!$u || $u->isAdmin())
+            <li class="drawer-heading">Admin</li>
 
             <!-- Staff Management -->
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('staff.*') ? 'active' : '' }}"
-                    href="{{ route('staff.index') }}">
-                    <i class="fas fa-users me-2"></i>
-                    <span class="nav-text">Staff</span>
+            <li class="drawer-nav-item">
+                <a href="{{ route('staff.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('staff.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">badge</span>
+                    <span>Staff Management</span>
                 </a>
             </li>
 
             <!-- Roles & Permissions -->
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}"
-                    href="{{ route('roles.index') }}">
-                    <i class="fas fa-user-shield me-2"></i>
-                    <span class="nav-text">Roles & Permissions</span>
+            <li class="drawer-nav-item">
+                <a href="{{ route('roles.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">shield_person</span>
+                    <span>Roles & Permissions</span>
                 </a>
             </li>
 
             <!-- Settings -->
-            <li class="nav-item mb-1">
-                <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"
-                    href="{{ route('settings.index') }}">
-                    <i class="fas fa-cog me-2"></i>
-                    <span class="nav-text">Settings</span>
+            <li class="drawer-nav-item">
+                <a href="{{ route('settings.index') }}" 
+                   class="drawer-nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
                 </a>
             </li>
             @endif
 
-            <hr class="sidebar-divider mx-2 opacity-25">
+            <li class="my-2 border-t border-surface-muted list-none"></li>
 
             <!-- Logout -->
-            <li class="nav-item mb-1">
-                <form method="POST" action="{{ route('logout') }}">
+            <li class="drawer-nav-item">
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
                     @csrf
-                    <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start">
-                        <i class="fas fa-sign-out-alt me-2"></i>
-                        <span class="nav-text">Logout</span>
+                    <button type="submit" class="drawer-nav-link w-full border-0 bg-transparent text-left cursor-pointer text-error hover:bg-surface-high">
+                        <span class="material-symbols-outlined text-error">logout</span>
+                        <span>Logout</span>
                     </button>
                 </form>
             </li>
         </ul>
     </div>
-</div>
-<!-- Sidebar Overlay for Mobile -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+</aside>

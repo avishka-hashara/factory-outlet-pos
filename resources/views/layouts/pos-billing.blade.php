@@ -21,112 +21,22 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Custom POS Tokens & Theme CSS -->
-    <link href="{{ asset('css/pos-theme.css') }}" rel="stylesheet">
     <link href="{{ asset('css/pos-tokens.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
 <body class="h-screen w-screen overflow-hidden bg-background text-on-surface font-sans flex flex-col m-0 p-0">
-    <!-- Top Navbar (reuse existing partial) -->
+    <!-- Top Navbar -->
     @include('partials.navbar')
 
     <!-- POS App Container -->
     <div id="pos-app" class="flex-1 flex overflow-hidden min-h-0 w-full">
-        <!-- Left Icon Rail (~88px) -->
-        <nav id="pos-icon-rail" aria-label="POS Navigation Rail">
-            <div class="rail-nav">
-                @php $u = auth()->user(); @endphp
+        <!-- Global Icon Rail (88px) -->
+        @include('partials.pos-rail')
 
-                <!-- Sales / POS (Active) -->
-                @if($u?->canAccess('pos'))
-                <a href="{{ route('pos.index') }}" class="rail-item {{ request()->routeIs('pos.*') ? 'active' : '' }}" title="Sales / POS">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span>Sales</span>
-                </a>
-                @endif
+        <!-- Collapsible Sidebar Panel (Drawer Overlay) -->
+        @include('partials.sidebar')
 
-                <!-- Returns -->
-                @if($u?->canAccess('returns'))
-                <a href="{{ route('returns.index') }}" class="rail-item {{ request()->routeIs('returns.*') ? 'active' : '' }}" title="Returns & Refunds">
-                    <i class="fas fa-undo-alt"></i>
-                    <span>Returns</span>
-                </a>
-                @endif
-
-                <!-- Stock / Products -->
-                @if($u?->canAccess('products'))
-                <a href="{{ route('products.index') }}" class="rail-item {{ request()->routeIs('products.*') ? 'active' : '' }}" title="Stock & Products">
-                    <i class="fas fa-box-open"></i>
-                    <span>Stock</span>
-                </a>
-                @endif
-
-                <!-- Orders / Sales Log -->
-                @if($u?->canAccess('pos_log') || $u?->canAccess('sales'))
-                <a href="{{ route('pos.log') }}" class="rail-item {{ request()->routeIs('pos.log') || request()->routeIs('sales.*') ? 'active' : '' }}" title="Orders & Sales Log">
-                    <i class="fas fa-receipt"></i>
-                    <span>Orders</span>
-                </a>
-                @endif
-
-                <!-- Reports -->
-                @if($u?->canAccess('reports'))
-                <a href="{{ route('reports.index') }}" class="rail-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Reports</span>
-                </a>
-                @endif
-
-                <!-- Cash Drawer -->
-                @if($u?->canAccess('cash_drawer'))
-                <a href="{{ route('cash-drawer.index') }}" class="rail-item {{ request()->routeIs('cash-drawer.*') ? 'active' : '' }}" title="Cash Drawer">
-                    <i class="fas fa-wallet"></i>
-                    <span>Drawer</span>
-                </a>
-                @endif
-
-                <!-- Customers -->
-                <a href="{{ route('customers.index') }}" class="rail-item {{ request()->routeIs('customers.*') ? 'active' : '' }}" title="Customers">
-                    <i class="fas fa-users"></i>
-                    <span>Customers</span>
-                </a>
-
-                <!-- Gift Cards -->
-                @if($u?->canAccess('gift_cards'))
-                <a href="{{ route('gift-cards.index') }}" class="rail-item {{ request()->routeIs('gift-cards.*') ? 'active' : '' }}" title="Gift Cards">
-                    <i class="fas fa-gift"></i>
-                    <span>Gift Cards</span>
-                </a>
-                @endif
-
-                <!-- Dashboard -->
-                @if($u?->canAccess('dashboard'))
-                <a href="{{ route('dashboard') }}" class="rail-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" title="Dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-                @endif
-            </div>
-
-            <!-- Bottom Pin: Logout -->
-            <div class="rail-bottom-pin" id="pos-rail-logout">
-                <form method="POST" action="{{ route('logout') }}" style="margin:0;">
-                    @csrf
-                    <button type="submit" class="rail-bottom-btn" title="Logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                        <span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </nav>
-
-        <!-- Sidebar dim overlay -->
-        <div id="pos-sidebar-overlay" onclick="posSidebarClose()"></div>
-
-        <!-- Collapsible Sidebar Panel (Drawer) -->
-        <div id="pos-sidebar-panel">
-            @include('partials.sidebar')
-        </div>
-
+        <!-- POS Page Content (Center Panel + Cart Panel) -->
         @yield('content')
     </div>
 
@@ -175,7 +85,6 @@
             try {
                 const resp = await fetch(SYNC_URL, { method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF} });
                 const data = await resp.json();
-                // Shopify integration is turned off — show a plain message, run no sync.
                 if (data.disabled) {
                     setDot('idle');
                     if (dot) dot.title = data.message || 'This feature is not enabled yet.';
@@ -228,28 +137,12 @@
         setInterval(() => runSync(false), AUTO_SYNC_EVERY);
     })();
 
-    // ===== POS SIDEBAR TOGGLE =====
-    const posSidebarPanel   = document.getElementById('pos-sidebar-panel');
-    const posSidebarOverlay = document.getElementById('pos-sidebar-overlay');
-    const navbarToggleBtn   = document.getElementById('sidebarToggle');
-
-    // Bind navbar toggle button to the POS sidebar logic
-    if (navbarToggleBtn) {
-        navbarToggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            posSidebarToggle();
-        });
-    }
-
-    // Restore state from sessionStorage
-    if (sessionStorage.getItem('pos_sidebar_open') === '1') {
-        posSidebarPanel.classList.add('sidebar-open');
-        posSidebarOverlay.classList.add('visible');
-    }
-
+    // ===== DRAWER OVERLAY TOGGLE =====
     function posSidebarToggle() {
-        const isOpen = posSidebarPanel.classList.contains('sidebar-open');
-        if (isOpen) {
+        const p = document.getElementById('pos-sidebar-panel');
+        const o = document.getElementById('pos-sidebar-overlay');
+        if (!p) return;
+        if (p.classList.contains('sidebar-open')) {
             posSidebarClose();
         } else {
             posSidebarOpen();
@@ -257,25 +150,32 @@
     }
 
     function posSidebarOpen() {
-        posSidebarPanel.classList.add('sidebar-open');
-        posSidebarOverlay.classList.add('visible');
-        sessionStorage.setItem('pos_sidebar_open', '1');
+        const p = document.getElementById('pos-sidebar-panel');
+        const o = document.getElementById('pos-sidebar-overlay');
+        if (p) p.classList.add('sidebar-open');
+        if (o) o.classList.add('visible');
     }
 
     function posSidebarClose() {
-        posSidebarPanel.classList.remove('sidebar-open');
-        posSidebarOverlay.classList.remove('visible');
-        sessionStorage.setItem('pos_sidebar_open', '0');
+        const p = document.getElementById('pos-sidebar-panel');
+        const o = document.getElementById('pos-sidebar-overlay');
+        if (p) p.classList.remove('sidebar-open');
+        if (o) o.classList.remove('visible');
+    }
+
+    // Bind navbar toggle button to the drawer logic
+    const navbarToggleBtn = document.getElementById('sidebarToggle');
+    if (navbarToggleBtn) {
+        navbarToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            posSidebarToggle();
+        });
     }
 
     // Close with Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') posSidebarClose();
-    });
-
-    // Active nav link highlight inside sidebar panel
-    document.querySelectorAll('#pos-sidebar-panel .nav-link').forEach(link => {
-        if (link.href === window.location.href) link.classList.add('active');
     });
     </script>
 </body>

@@ -669,7 +669,7 @@ body.rail-collapsed .pos-global-rail .rail-divider {
    CENTER PANEL (PRODUCT GRID & FILTER BAR) (SECTION 2 & 3)
    ========================================================= */
 #pos-center-panel {
-    flex: 1 1 auto;
+    flex: 1 1 0%;
     min-width: 0;
     height: 100%;
     background: var(--color-surface);
@@ -806,24 +806,32 @@ body.rail-collapsed .pos-global-rail .rail-divider {
     color: var(--color-outline);
 }
 
-/* Product Tiles Grid Container (Section 2) */
+/* Product Tiles Grid Container (Section 2) - Fluid Responsive Auto-Fit/Auto-Fill */
 #catalogue-grid-wrap {
     flex: 1 1 auto;
     min-height: 0;
+    min-width: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px 14px;
+    box-sizing: border-box;
 }
 
 #product-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
     gap: 12px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    align-content: start;
 }
 
-@media (max-width: 1200px) {
-    #product-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
+.product-item {
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Dark Industrial Product Tile Card (Section 2 - Lumen Terminal) */
@@ -839,6 +847,10 @@ body.rail-collapsed .pos-global-rail .rail-divider {
     transition: border-color 0.15s, background 0.15s !important;
     box-shadow: none !important;
     user-select: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
 }
 
 .prod-card:hover {
@@ -853,7 +865,7 @@ body.rail-collapsed .pos-global-rail .rail-divider {
 
 .prod-img {
     width: 100% !important;
-    height: 140px !important;
+    height: 135px !important;
     background: #17191E !important;
     border-bottom: 1px solid #2C3037 !important;
     display: flex !important;
@@ -861,6 +873,8 @@ body.rail-collapsed .pos-global-rail .rail-divider {
     justify-content: center !important;
     position: relative !important;
     overflow: hidden !important;
+    min-width: 0 !important;
+    flex-shrink: 0 !important;
 }
 
 .prod-img img {
@@ -868,6 +882,8 @@ body.rail-collapsed .pos-global-rail .rail-divider {
     height: 100% !important;
     object-fit: cover !important;
     transition: transform 0.2s ease !important;
+    display: block !important;
+    max-width: 100% !important;
 }
 
 .prod-card:hover .prod-img img {
@@ -886,19 +902,23 @@ body.rail-collapsed .pos-global-rail .rail-divider {
 
 .prod-stock-badge {
     position: absolute !important;
-    top: 8px !important;
-    right: 8px !important;
+    top: 7px !important;
+    right: 7px !important;
     background: rgba(0, 0, 0, 0.8) !important;
     border: 1px solid rgba(245, 165, 36, 0.35) !important;
     color: #F5A524 !important;
-    padding: 2px 7px !important;
+    padding: 2px 6px !important;
     border-radius: 4px !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
-    letter-spacing: 0.06em !important;
+    letter-spacing: 0.05em !important;
     text-transform: uppercase !important;
     z-index: 2 !important;
     backdrop-filter: blur(4px) !important;
+    max-width: calc(100% - 14px) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 .prod-stock-badge.low-stock,
@@ -908,39 +928,48 @@ body.rail-collapsed .pos-global-rail .rail-divider {
 }
 
 .prod-info {
-    padding: 10px 12px !important;
+    padding: 9px 11px !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 3px !important;
     background: transparent !important;
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     justify-content: space-between !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
 }
 
 .prod-name {
-    font-size: 0.88rem !important;
+    font-size: 0.86rem !important;
     font-weight: 600 !important;
     color: #FFFFFF !important;
     line-height: 1.25 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
 }
 
 .prod-sku {
-    font-size: 0.72rem !important;
+    font-size: 0.7rem !important;
     color: #9CA3AF !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
 }
 
 .prod-price-tag {
-    margin-top: 4px !important;
-    font-size: 0.98rem !important;
+    margin-top: 3px !important;
+    font-size: 0.95rem !important;
     font-weight: 700 !important;
     color: #FFFFFF !important;
     font-feature-settings: var(--font-feature-tabular) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 #no-results {

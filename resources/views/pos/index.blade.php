@@ -120,42 +120,14 @@ Matches DESIGN.md + Stitch Terminal Mockup
                         </div>
                     </div>
                 @empty
-                    @php
-                        $sampleProducts = [
-                            ['id'=>1,'name'=>'Classic Cotton Crewneck Tee - Black','sku'=>'TSH-BLK-M','meta'=>'M / Black','price'=>2450,'stock'=>25,'category'=>'Men'],
-                            ['id'=>2,'name'=>'Slim Fit Chino Trousers - Navy','sku'=>'CHN-NVY-32','meta'=>'32 / Navy','price'=>4850,'stock'=>15,'category'=>'Men'],
-                            ['id'=>3,'name'=>'Oxford Long Sleeve Shirt - White','sku'=>'SHT-WHT-L','meta'=>'L / White','price'=>5200,'stock'=>18,'category'=>'Men'],
-                            ['id'=>4,'name'=>'Oversized Heavyweight Hoodie - Grey','sku'=>'HD-GRY-XL','meta'=>'XL / Grey','price'=>6500,'stock'=>12,'category'=>'Unisex'],
-                            ['id'=>5,'name'=>'Vintage Wash Denim Jacket - Blue','sku'=>'JKT-BLU-L','meta'=>'L / Indigo','price'=>8900,'stock'=>8,'category'=>'Outerwear'],
-                            ['id'=>6,'name'=>'Relaxed Linen Blend Shorts - Beige','sku'=>'SHT-BEI-M','meta'=>'M / Beige','price'=>3200,'stock'=>20,'category'=>'Bottoms'],
-                            ['id'=>7,'name'=>'Floral Summer Wrap Dress - Red','sku'=>'DRS-RED-S','meta'=>'S / Red','price'=>5900,'stock'=>10,'category'=>'Women'],
-                            ['id'=>8,'name'=>'Premium Pique Polo Shirt - Emerald','sku'=>'POLO-GRN-L','meta'=>'L / Emerald','price'=>3800,'stock'=>14,'category'=>'Men'],
-                            ['id'=>9,'name'=>'High-Rise Straight Jeans - Light Wash','sku'=>'JNS-LGT-28','meta'=>'28 / Light Wash','price'=>6200,'stock'=>11,'category'=>'Women'],
-                            ['id'=>10,'name'=>'Kids Graphic Print Tee - Yellow','sku'=>'KID-YEL-06','meta'=>'6Y / Yellow','price'=>1850,'stock'=>22,'category'=>'Kids'],
-                            ['id'=>11,'name'=>'Ribbed Knit Crop Top - Olive','sku'=>'TOP-OLV-M','meta'=>'M / Olive','price'=>2900,'stock'=>16,'category'=>'Women'],
-                            ['id'=>12,'name'=>'Classic Leather Belt - Brown','sku'=>'ACC-BLT-BRN','meta'=>'OS / Brown','price'=>2200,'stock'=>30,'category'=>'Accessories'],
-                        ];
-                    @endphp
-                    @foreach($sampleProducts as $p)
-                        <div class="product-item" data-name="{{ strtolower($p['name']) }}"
-                            data-sku="{{ strtolower($p['sku']) }}" data-collections="" data-source="local" data-category="{{ $p['category'] }}">
-                            <div class="prod-card" data-id="{{ $p['id'] }}" data-name="{{ $p['name'] }}"
-                                data-price="{{ $p['price'] }}" data-stock="{{ $p['stock'] }}" data-sku="{{ $p['sku'] }}"
-                                data-variants='[]' onclick="handleProductClick(this)">
-                                <div class="prod-img">
-                                    <span class="prod-stock-badge">{{ $p['stock'] }} IN STOCK</span>
-                                    <i class="fas fa-tshirt"></i>
-                                </div>
-                                <div class="prod-info">
-                                    <div>
-                                        <div class="prod-name" title="{{ $p['name'] }}">{{ $p['name'] }}</div>
-                                        <div class="prod-sku">{{ $p['meta'] }} • SKU: {{ $p['sku'] }}</div>
-                                    </div>
-                                    <div class="prod-price-tag">Rs. {{ number_format($p['price'], 2) }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
+                    <div id="no-products-empty-state" class="col-span-full py-16 text-center text-on-surface-variant flex flex-col items-center justify-center w-full" style="grid-column: 1 / -1; padding: 60px 20px; color: var(--on-surface-variant); text-align: center;">
+                        <span class="material-symbols-outlined mb-2 opacity-50" style="font-size: 48px; color: var(--on-surface-variant); display: block; margin-bottom: 8px;">inventory_2</span>
+                        <div class="text-[16px] font-semibold text-on-surface mb-1" style="font-size: 16px; font-weight: 600; color: var(--on-surface); margin-bottom: 4px;">No products found in inventory</div>
+                        <div class="text-[13px] text-on-surface-variant max-w-sm mb-4" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;">Add products or sync from your catalog to begin scanning and billing.</div>
+                        <button type="button" class="btn btn-primary px-4 py-2 text-[13px] font-semibold rounded" data-bs-toggle="modal" data-bs-target="#quickAddProductModal" style="background-color: var(--primary) !important; color: var(--on-primary) !important; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 600; cursor: pointer;">
+                            <span class="material-symbols-outlined align-middle mr-1" style="font-size: 18px; vertical-align: middle; margin-right: 4px;">add</span> Add New Product
+                        </button>
+                    </div>
                 @endforelse
 
                 <div id="no-results" style="display:none;">

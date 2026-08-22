@@ -98,75 +98,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('customers', CustomerController::class)->except(['create', 'edit']);
 });
 
-Route::get('/dashboard', function () {
-    $today = now()->toDateString();
-    $monthStart = now()->startOfMonth()->toDateString();
-
-    // Today's stats
-    $todaySales    = \App\Models\Sale::whereDate('created_at', $today)->sum('total');
-    $todayReturns  = \App\Models\ProductReturn::whereDate('created_at', $today)->where('status','completed')->sum('total_refunded');
-    $todaySales    = max(0, $todaySales - $todayReturns);
-    $todayCount    = \App\Models\Sale::whereDate('created_at', $today)->count();
-    $yesterdaySales = \App\Models\Sale::whereDate('created_at', now()->subDay()->toDateString())->sum('total')
-        - \App\Models\ProductReturn::whereDate('created_at', now()->subDay()->toDateString())->where('status','completed')->sum('total_refunded');
-
-    // Monthly stats
-    $monthRevenue = \App\Models\Sale::whereDate('created_at', '>=', $monthStart)->sum('total')
-        - \App\Models\ProductReturn::whereDate('created_at', '>=', $monthStart)->where('status','completed')->sum('total_refunded');
-    $lastMonthRevenue = \App\Models\Sale::whereBetween('created_at', [
-        now()->subMonth()->startOfMonth(),
-        now()->subMonth()->endOfMonth()
-    ])->sum('total')
-    - \App\Models\ProductReturn::whereBetween('created_at', [
-        now()->subMonth()->startOfMonth(),
-        now()->subMonth()->endOfMonth()
-    ])->where('status','completed')->sum('total_refunded');
-
-    // Products
-    $totalProducts = \App\Models\Product::count();
-    $totalCategories = \App\Models\Product::whereNotNull('category')->distinct('category')->count('category');
-    $lowStockProducts = \App\Models\Product::where('stock', '<=', 5)->where('stock', '>', 0)->orderBy('stock')->limit(10)->get();
-    $outOfStock = \App\Models\Product::where('stock', '<=', 0)->count();
-    $lowStockCount = \App\Models\Product::where('stock', '<=', 5)->count();
-
-    // Payment breakdown (this month)
-    $paymentBreakdown = \App\Models\Sale::whereDate('created_at', '>=', $monthStart)
-        ->selectRaw('payment_method, SUM(total) as total, COUNT(*) as count')
-        ->groupBy('payment_method')
-        ->pluck('total', 'payment_method')
-        ->toArray();
-
-    // Recent transactions
-    $recentSales = \App\Models\Sale::with(['items.product', 'user'])->latest()->limit(5)->get();
-
-    // Daily sales for the last 7 days (for chart)
-    $dailySales = collect();
-    for ($i = 6; $i >= 0; $i--) {
-        $date = now()->subDays($i);
-        $amount = \App\Models\Sale::whereDate('created_at', $date->toDateString())->sum('total');
-        $dailySales->push([
-            'label' => $date->format('D'),
-            'date' => $date->format('M d'),
-            'amount' => (float) $amount,
-        ]);
-    }
-
-    return view('dashboard', compact(
-        'todaySales',
-        'todayCount',
-        'yesterdaySales',
-        'monthRevenue',
-        'lastMonthRevenue',
-        'totalProducts',
-        'totalCategories',
-        'lowStockProducts',
-        'lowStockCount',
-        'outOfStock',
-        'paymentBreakdown',
-        'recentSales',
-        'dailySales'
-    ));
-})->middleware(['auth', 'verified', 'active', 'permission:dashboard'])->name('dashboard');
+// Dashboard routes (authenticated + permission gated)
+Route::middleware(['auth', 'verified', 'active', 'permission:dashboard'])->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/metrics', [\App\Http\Controllers\DashboardController::class, 'metrics'])->name('dashboard.metrics');
+    Route::get('/dashboard/export', [\App\Http\Controllers\DashboardController::class, 'export'])->name('dashboard.export');
+});
 
 // Products
 Route::middleware(['auth', 'active'])->group(function () {

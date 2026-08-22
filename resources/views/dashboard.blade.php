@@ -4,23 +4,23 @@
 @section('content')
 <div x-data="dashboardApp(@js($metrics), '{{ $range }}')"
      x-init="initDashboard()"
-     class="max-w-[1600px] mx-auto flex flex-col gap-gutter select-none pb-6">
+     class="h-[calc(100vh-56px)] max-h-[calc(100vh-56px)] overflow-hidden flex flex-col justify-between px-5 py-3.5 max-w-[1600px] mx-auto box-border select-none gap-3.5">
 
     <!-- ===== Page Header ===== -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0">
         <div class="flex items-baseline gap-3">
-            <h1 class="font-headline-lg text-headline-lg text-on-surface m-0 font-bold tracking-tight">Dashboard</h1>
-            <p class="font-body-sm text-body-sm text-on-surface-variant m-0">Live Performance Overview</p>
+            <h1 class="font-headline-lg text-[22px] text-on-surface m-0 font-bold tracking-tight">Dashboard</h1>
+            <p class="font-body-sm text-[12px] text-on-surface-variant m-0">Live Performance Overview</p>
         </div>
 
         <!-- Range Selector & Export -->
         <x-dashboard.range-selector :current-range="$range" />
     </div>
 
-    <!-- ===== KPI Row (4-up) ===== -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter"
+    <!-- ===== KPI Row (4-up, ~110px height) ===== -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0"
          :class="isLoading ? 'opacity-60 transition-opacity' : ''">
-        <!-- KPI 1: Sales (Primary with amber top edge & corner glow) -->
+        <!-- KPI 1: Sales (Subtle radial highlight, 34px value, 110px height) -->
         <x-dashboard.stat-card
             title="Today's Sales"
             icon="payments"
@@ -66,8 +66,8 @@
         />
     </div>
 
-    <!-- ===== Charts Row (8 / 4 Split) ===== -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter min-h-[320px]"
+    <!-- ===== Charts Row (8 / 4 Split, ~300px height) ===== -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 shrink-0 min-h-[300px] max-h-[310px]"
          :class="isLoading ? 'opacity-60 transition-opacity' : ''">
         <!-- Sales Trend Area Chart (8 Cols) -->
         <x-dashboard.sales-trend-chart :trend="$metrics['trend']" />
@@ -76,14 +76,14 @@
         <x-dashboard.payment-mix-donut :payment-mix="$metrics['payment_mix']" />
     </div>
 
-    <!-- ===== Second Row (7 / 5 Split) ===== -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter"
+    <!-- ===== Bottom Row (2fr / 1fr Split, gap 20px) ===== -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0"
          :class="isLoading ? 'opacity-60 transition-opacity' : ''">
-        <!-- Recent Transactions Table (7 Cols) -->
+        <!-- Recent Transactions Table (2fr / 2 cols) -->
         <x-dashboard.recent-transactions-table :recent-transactions="$metrics['recent_transactions']" />
 
-        <!-- Low Stock Alerts & Drawer Status (5 Cols Stack) -->
-        <div class="lg:col-span-5 grid grid-rows-2 gap-gutter">
+        <!-- Stack of Stock Alerts & Drawer Status (1fr / 1 col) -->
+        <div class="flex flex-col gap-3.5 h-full">
             <!-- Stock Alerts Panel -->
             <x-dashboard.stock-alerts-panel :stock-alerts="$metrics['stock_alerts']" />
 
@@ -173,62 +173,74 @@ function dashboardApp(initialMetrics, initialRange) {
             }
         },
 
-        // ===== SVG Trend Calculations =====
+        // ===== SVG Trend Calculations (Auto-Scaled Ticks) =====
         get trendMaxVal() {
             const curVals = (this.metrics?.trend?.current || []).map(p => Number(p.value) || 0);
             const compVals = (this.metrics?.trend?.comparison || []).map(p => Number(p.value) || 0);
-            const max = Math.max(...curVals, ...compVals, 100);
-            return Math.ceil(max * 1.15); // +15% headroom
+            const peak = Math.max(...curVals, ...compVals, 1000);
+            if (peak <= 20000) return 20000;
+            if (peak <= 40000) return 40000;
+            if (peak <= 60000) return 60000;
+            return Math.ceil(peak / 20000) * 20000;
         },
 
         get trendMaxLabel() {
-            const m = this.trendMaxVal;
-            return m >= 1000 ? Math.round(m / 1000) + 'k' : m;
+            return (this.trendMaxVal / 1000) + 'k';
         },
         get trendMidHighLabel() {
-            const m = this.trendMaxVal * 0.75;
-            return m >= 1000 ? Math.round(m / 1000) + 'k' : Math.round(m);
+            return (this.trendMaxVal * 0.75 / 1000) + 'k';
         },
         get trendMidLabel() {
-            const m = this.trendMaxVal * 0.5;
-            return m >= 1000 ? Math.round(m / 1000) + 'k' : Math.round(m);
+            return (this.trendMaxVal * 0.5 / 1000) + 'k';
         },
         get trendMidLowLabel() {
-            const m = this.trendMaxVal * 0.25;
-            return m >= 1000 ? Math.round(m / 1000) + 'k' : Math.round(m);
+            return (this.trendMaxVal * 0.25 / 1000) + 'k';
         },
 
-        get trendLinePath() {
+        // Smooth cubic Bezier spline generator
+        getSmoothPath(pts, max) {
+            if (!pts || !pts.length) return 'M 0 100 L 100 100';
+            if (pts.length === 1) return `M 0 ${100 - (pts[0].value / max) * 90} L 100 ${100 - (pts[0].value / max) * 90}`;
+
+            const step = 100 / (pts.length - 1);
+            const coords = pts.map((p, i) => ({
+                x: i * step,
+                y: Math.max(5, Math.min(95, 100 - ((Number(p.value) || 0) / max) * 90))
+            }));
+
+            let d = `M ${coords[0].x.toFixed(2)} ${coords[0].y.toFixed(2)}`;
+
+            for (let i = 0; i < coords.length - 1; i++) {
+                const p0 = i > 0 ? coords[i - 1] : coords[i];
+                const p1 = coords[i];
+                const p2 = coords[i + 1];
+                const p3 = i < coords.length - 2 ? coords[i + 2] : p2;
+
+                const cp1x = p1.x + (p2.x - p0.x) / 6;
+                const cp1y = p1.y + (p2.y - p0.y) / 6;
+                const cp2x = p2.x - (p3.x - p1.x) / 6;
+                const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+                d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+            }
+            return d;
+        },
+
+        get trendLineSmoothPath() {
             const pts = this.metrics?.trend?.current || [];
-            if (!pts.length) return 'M0,100 L100,100';
-            const max = this.trendMaxVal;
-            const step = 100 / (pts.length - 1 || 1);
-
-            return pts.map((p, idx) => {
-                const x = (idx * step).toFixed(2);
-                const y = (100 - ((Number(p.value) || 0) / max) * 95).toFixed(2);
-                return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
-            }).join(' ');
+            return this.getSmoothPath(pts, this.trendMaxVal);
         },
 
-        get trendAreaPath() {
+        get trendAreaSmoothPath() {
             const pts = this.metrics?.trend?.current || [];
-            if (!pts.length) return 'M0,100 L100,100 Z';
-            const line = this.trendLinePath;
-            return `${line} L100,100 L0,100 Z`;
+            if (!pts.length) return 'M 0 100 L 100 100 Z';
+            const line = this.trendLineSmoothPath;
+            return `${line} L 100 100 L 0 100 Z`;
         },
 
-        get trendComparisonPath() {
+        get trendComparisonSmoothPath() {
             const pts = this.metrics?.trend?.comparison || [];
-            if (!pts.length) return 'M0,100 L100,100';
-            const max = this.trendMaxVal;
-            const step = 100 / (pts.length - 1 || 1);
-
-            return pts.map((p, idx) => {
-                const x = (idx * step).toFixed(2);
-                const y = (100 - ((Number(p.value) || 0) / max) * 95).toFixed(2);
-                return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
-            }).join(' ');
+            return this.getSmoothPath(pts, this.trendMaxVal);
         },
 
         get trendLastPoint() {
@@ -236,34 +248,52 @@ function dashboardApp(initialMetrics, initialRange) {
             if (!pts.length) return null;
             const lastIdx = pts.length - 1;
             const max = this.trendMaxVal;
+            const lastVal = Number(pts[lastIdx].value) || 0;
             return {
                 x: 100,
-                y: (100 - ((Number(pts[lastIdx].value) || 0) / max) * 95).toFixed(2),
+                y: Math.max(5, Math.min(95, 100 - (lastVal / max) * 90)).toFixed(2),
             };
         },
 
-        // ===== SVG Donut Calculations =====
-        get paymentSegments() {
+        // ===== SVG Donut Calculations (3 Distinct Proportional Arcs) =====
+        getDonutSegment(index, defaultColor) {
             const methods = this.metrics?.payment_mix?.methods || [];
-            const circumference = 2 * Math.PI * 40; // r = 40 => ~251.327
-            let accumulatedPercent = 0;
+            const circumference = 2 * Math.PI * 38; // ~238.76
+            const gap = 3.5;
 
-            return methods.map(m => {
-                const pct = Math.max(0, Number(m.percentage) || 0);
-                const dashLength = (pct / 100) * circumference;
-                const gapLength = circumference - dashLength;
-                const rotation = (accumulatedPercent / 100) * 360;
+            let accPct = 0;
+            for (let i = 0; i < index; i++) {
+                accPct += Math.max(0, Number(methods[i]?.percentage) || 0);
+            }
 
-                accumulatedPercent += pct;
+            const curMethod = methods[index];
+            const pct = Math.max(0, Number(curMethod?.percentage) || 0);
+            const color = curMethod?.color || defaultColor;
 
+            if (pct <= 0) {
                 return {
-                    color: m.color || '#F5A623',
-                    dashArray: `${dashLength.toFixed(2)} ${gapLength.toFixed(2)}`,
-                    dashOffset: '0',
-                    transform: `rotate(${rotation.toFixed(1)} 50 50)`,
+                    color: 'transparent',
+                    dashArray: `0 ${circumference.toFixed(2)}`,
+                    transform: 'rotate(0 50 50)',
                 };
-            });
-        }
+            }
+
+            const dashLen = Math.max(0.1, (pct / 100) * circumference - gap);
+            const gapLen = circumference - dashLen;
+            const rotation = (accPct / 100) * 360;
+
+            return {
+                color: color,
+                dashArray: `${dashLen.toFixed(2)} ${gapLen.toFixed(2)}`,
+                transform: `rotate(${rotation.toFixed(1)} 50 50)`,
+            };
+        },
+
+        get donutSegment1() { return this.getDonutSegment(0, '#F5A623'); },
+        get donutSegment2() { return this.getDonutSegment(1, '#dae3f3'); },
+        get donutSegment3() { return this.getDonutSegment(2, '#524534'); },
+        get donutDominantPercentage() { return this.metrics?.payment_mix?.dominant_percentage ?? 0; },
+        get donutDominantMethod() { return this.metrics?.payment_mix?.dominant_method ?? 'KOKO'; },
     };
 }
 </script>

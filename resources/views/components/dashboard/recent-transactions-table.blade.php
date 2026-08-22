@@ -1,48 +1,51 @@
 @props(['recentTransactions' => []])
 
-<div class="lg:col-span-7 bg-card-surface border border-border-color rounded-card p-md flex flex-col min-h-[300px]">
-    <div class="flex justify-between items-center mb-3">
-        <h2 class="font-headline-md text-[16px] text-on-surface m-0 font-semibold">Recent Transactions</h2>
-        <a href="{{ route('pos.log') }}" class="text-primary font-label-caps text-label-caps uppercase hover:underline no-underline font-bold">View All</a>
+<div class="lg:col-span-2 bg-card-surface border rounded-card p-4 flex flex-col justify-between select-none box-border min-h-[265px]"
+     style="border-color: rgba(255, 255, 255, 0.06);">
+    <!-- Card Header -->
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="font-headline-md text-[15px] text-on-surface m-0 font-semibold tracking-tight">Recent Transactions</h2>
+        <a href="{{ route('pos.log') }}" class="text-primary font-label-caps text-[11px] uppercase hover:underline no-underline font-bold tracking-wider">View All</a>
     </div>
 
-    <div class="overflow-x-auto custom-scrollbar flex-1">
+    <!-- Table showing 4 rows fully -->
+    <div class="overflow-x-auto custom-scrollbar flex-1 flex flex-col justify-between">
         <table class="w-full text-left border-collapse text-body-sm">
             <thead>
-                <tr class="border-b border-border-color text-on-surface-variant font-label-caps text-[10px] uppercase bg-dark-bg/50">
-                    <th class="py-2 px-2 font-semibold">Bill #</th>
-                    <th class="py-2 px-2 font-semibold">Time</th>
-                    <th class="py-2 px-2 font-semibold">Customer / Items</th>
-                    <th class="py-2 px-2 font-semibold">Status</th>
-                    <th class="py-2 px-2 font-semibold text-right">Amount</th>
+                <tr class="border-b border-border-color/60 text-on-surface-variant font-label-caps text-[10px] uppercase">
+                    <th class="py-1.5 px-2 font-bold tracking-wider">Bill #</th>
+                    <th class="py-1.5 px-2 font-bold tracking-wider">Time</th>
+                    <th class="py-1.5 px-2 font-bold tracking-wider">Customer / Items</th>
+                    <th class="py-1.5 px-2 font-bold tracking-wider">Status</th>
+                    <th class="py-1.5 px-2 font-bold tracking-wider text-right">Amount</th>
                 </tr>
             </thead>
             <tbody>
-                <template x-for="tx in (metrics?.recent_transactions ?? [])" :key="tx.id">
+                <template x-for="tx in ((metrics?.recent_transactions ?? @js($recentTransactions)).slice(0, 4))" :key="tx.id">
                     <tr @click="window.location.href = tx.invoice_url"
-                        class="border-b border-border-color hover:bg-hover-surface transition-colors cursor-pointer group"
+                        class="border-b border-border-color/40 last:border-0 hover:bg-hover-surface transition-colors cursor-pointer group"
                         :class="tx.status === 'Pending' ? 'bg-amber-accent/5' : ''">
                         
                         <!-- Bill Number -->
-                        <td class="py-2.5 px-2 font-metric-sm text-on-surface group-hover:text-amber-accent transition-colors tabular-nums font-bold"
+                        <td class="py-2 px-2 font-metric-sm text-on-surface group-hover:text-amber-accent transition-colors tabular-nums font-bold text-[12px]"
                             x-text="tx.bill_number"></td>
 
                         <!-- Time -->
-                        <td class="py-2.5 px-2 text-on-surface-variant text-[11px] tabular-nums"
+                        <td class="py-2 px-2 text-on-surface-variant text-[11px] tabular-nums"
                             x-text="tx.time"></td>
 
                         <!-- Customer & Items -->
-                        <td class="py-2.5 px-2">
-                            <div class="flex items-center gap-2">
+                        <td class="py-2 px-2">
+                            <div class="flex items-center gap-1.5">
                                 <span class="w-5 h-5 rounded-full bg-surface-variant flex items-center justify-center text-[9px] font-bold text-on-surface uppercase flex-shrink-0"
                                       x-text="tx.customer_initials"></span>
-                                <span class="text-on-surface truncate max-w-[180px]"
+                                <span class="text-on-surface truncate max-w-[180px] text-[12px] font-medium"
                                       x-text="tx.customer_name + ' · ' + tx.items_label"></span>
                             </div>
                         </td>
 
                         <!-- Status Chip -->
-                        <td class="py-2.5 px-2">
+                        <td class="py-2 px-2">
                             <template x-if="tx.status === 'Paid'">
                                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-label-caps uppercase text-green-400 bg-green-400/10 border border-green-400/20 font-bold">
                                     <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>Paid
@@ -58,19 +61,24 @@
                                     <span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>Refunded
                                 </span>
                             </template>
+                            <template x-if="tx.status !== 'Paid' && tx.status !== 'Pending' && tx.status !== 'Returned'">
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-label-caps uppercase text-red-400 bg-red-400/10 border border-red-400/20 font-bold"
+                                      x-text="tx.status">
+                                </span>
+                            </template>
                         </td>
 
                         <!-- Total Amount -->
-                        <td class="py-2.5 px-2 font-metric-sm text-on-surface text-right tabular-nums font-bold"
+                        <td class="py-2 px-2 font-metric-sm text-on-surface text-right tabular-nums font-bold text-[12px]"
                             x-text="tx.total_formatted"></td>
                     </tr>
                 </template>
 
                 <!-- Empty State -->
-                <tr x-show="!metrics?.recent_transactions?.length">
-                    <td colspan="5" class="py-8 text-center text-on-surface-variant">
-                        <span class="material-symbols-outlined text-[32px] opacity-30 block mb-1">receipt_long</span>
-                        <div class="text-body-sm">No transactions found</div>
+                <tr x-show="!((metrics?.recent_transactions ?? @js($recentTransactions)).length)">
+                    <td colspan="5" class="py-6 text-center text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[24px] opacity-30 block mb-1">receipt_long</span>
+                        <div class="text-body-sm text-[11px]">No transactions in this period</div>
                     </td>
                 </tr>
             </tbody>

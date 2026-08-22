@@ -156,45 +156,45 @@ class DashboardMetricsService
             $comparisonSeries = [];
 
             if ($range === 'today') {
-                // Buckets by 2 hours across operational day (08:00 to 22:00)
-                $hours = [8, 10, 12, 14, 16, 18, 20, 22];
                 $todayDate = $dates['current_start']->toDateString();
                 $ydayDate  = $dates['prior_start']->toDateString();
 
-                $driver = DB::connection()->getDriverName();
-                $hourSql = $driver === 'sqlite'
-                    ? 'CAST(strftime("%H", created_at) AS INTEGER) as hour, SUM(total) as total'
-                    : 'HOUR(created_at) as hour, SUM(total) as total';
+                // Fetch sales for today and yesterday
+                $todaySales = Sale::whereDate('created_at', $todayDate)->get(['created_at', 'total']);
+                $ydaySales  = Sale::whereDate('created_at', $ydayDate)->get(['created_at', 'total']);
 
-                // Fetch current day hourly sums
-                $todaySales = Sale::whereDate('created_at', $todayDate)
-                    ->selectRaw($hourSql)
-                    ->groupBy('hour')
-                    ->pluck('total', 'hour');
+                // Build 30-minute intervals across 08:00 to 20:00 (25 slots)
+                for ($h = 8; $h <= 20; $h++) {
+                    for ($m = 0; $m < 60; $m += 30) {
+                        if ($h === 20 && $m > 0) {
+                            break; // End at exactly 20:00
+                        }
 
-                $ydaySales = Sale::whereDate('created_at', $ydayDate)
-                    ->selectRaw($hourSql)
-                    ->groupBy('hour')
-                    ->pluck('total', 'hour');
+                        $slotLabel = sprintf('%02d:%02d', $h, $m);
+                        $slotStart = $h * 60 + $m;
+                        $slotEnd   = $slotStart + 30;
 
-                $currentRunning = 0;
-                $ydayRunning = 0;
+                        $tVal = $todaySales->filter(function ($s) use ($slotStart, $slotEnd) {
+                            if (!$s->created_at) return false;
+                            $timeMin = $s->created_at->hour * 60 + $s->created_at->minute;
+                            return $timeMin >= $slotStart && $timeMin < $slotEnd;
+                        })->sum('total');
 
-                foreach ($hours as $h) {
-                    $label = sprintf('%02d:00', $h);
-                    
-                    // Aggregate 2-hour bracket (h and h+1)
-                    $todayVal = (float) ($todaySales->get($h, 0) + $todaySales->get($h + 1, 0));
-                    $ydayVal  = (float) ($ydaySales->get($h, 0) + $ydaySales->get($h + 1, 0));
+                        $yVal = $ydaySales->filter(function ($s) use ($slotStart, $slotEnd) {
+                            if (!$s->created_at) return false;
+                            $timeMin = $s->created_at->hour * 60 + $s->created_at->minute;
+                            return $timeMin >= $slotStart && $timeMin < $slotEnd;
+                        })->sum('total');
 
-                    $currentSeries[] = [
-                        'label' => $label,
-                        'value' => round($todayVal, 2),
-                    ];
-                    $comparisonSeries[] = [
-                        'label' => $label,
-                        'value' => round($ydayVal, 2),
-                    ];
+                        $currentSeries[] = [
+                            'label' => $slotLabel,
+                            'value' => round((float) $tVal, 2),
+                        ];
+                        $comparisonSeries[] = [
+                            'label' => $slotLabel,
+                            'value' => round((float) $yVal, 2),
+                        ];
+                    }
                 }
             } else {
                 // Bucketed by day

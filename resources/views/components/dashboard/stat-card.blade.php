@@ -9,28 +9,26 @@
     'fieldKey' => '',
 ])
 
-<div class="bg-card-surface border border-border-color rounded-card p-md relative overflow-hidden flex flex-col justify-between hover:bg-hover-surface transition-colors cursor-default group min-h-[108px]">
-    @if($isPrimary)
-        <!-- 2px Amber Top Edge and Blurred Amber Glow on KPI 1 Only -->
-        <div class="absolute top-0 left-0 w-full h-[2px] bg-amber-accent"></div>
-        <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-accent/5 rounded-full blur-xl group-hover:bg-amber-accent/10 transition-colors pointer-events-none"></div>
-    @endif
-
-    <div class="flex justify-between items-start mb-2 relative z-10">
-        <span class="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-wider">{{ $title }}</span>
+<div class="border rounded-card px-5 py-4 relative overflow-hidden flex flex-col justify-between hover:bg-hover-surface transition-colors cursor-default group h-[110px] min-h-[110px] max-h-[110px] box-border select-none"
+     style="background: {{ $isPrimary ? 'radial-gradient(circle at top right, rgba(245, 166, 35, 0.08) 0%, transparent 65%), var(--card-surface)' : 'var(--card-surface)' }}; border-color: rgba(255, 255, 255, 0.06);">
+    
+    <!-- Top Label & Icon Row -->
+    <div class="flex justify-between items-center relative z-10">
+        <span class="font-label-caps text-[10px] uppercase text-on-surface-variant font-semibold tracking-wider">{{ $title }}</span>
         <span class="material-symbols-outlined text-[16px] {{ $isPrimary ? 'text-amber-accent' : 'text-on-surface-variant' }}">{{ $icon }}</span>
     </div>
 
-    <div class="relative z-10 flex items-end justify-between">
-        <!-- Display Value with tabular-nums -->
-        <div class="font-display-metrics text-display-metrics leading-none tabular-nums {{ $isPrimary ? 'text-amber-accent' : 'text-on-surface' }}"
+    <!-- Bottom Value & Delta Row -->
+    <div class="relative z-10 flex items-end justify-between gap-2">
+        <!-- Value (~34px / weight 700 / nowrap) -->
+        <div class="text-[34px] leading-[38px] font-[700] tabular-nums whitespace-nowrap truncate {{ $isPrimary ? 'text-amber-accent' : 'text-on-surface' }}"
              x-text="{{ $fieldKey }}?.formatted ?? '{{ $value }}'">
             {{ $value }}
         </div>
 
         <!-- Delta comparison pill -->
-        <div class="flex flex-col items-end">
-            <span class="flex items-center font-metric-sm text-[12px] leading-none tabular-nums"
+        <div class="flex flex-col items-end flex-shrink-0">
+            <span class="flex items-center font-metric-sm text-[12px] leading-none tabular-nums font-bold"
                   :class="({{ $fieldKey }}?.is_positive ?? {{ $isPositive ? 'true' : 'false' }}) ? 'text-green-400' : 'text-red-400'">
                 <span class="material-symbols-outlined text-[14px] mr-0.5"
                       x-text="({{ $fieldKey }}?.is_positive ?? {{ $isPositive ? 'true' : 'false' }}) ? 'arrow_upward' : 'arrow_downward'">

@@ -7,7 +7,7 @@
     /* =========================================
        LUMEN TERMINAL CORE PALETTE (TASK SPEC)
        ========================================= */
-    --background: #14161A;
+    --background: #0E1013;
     --surface: #1E2126;
     --surface-muted: #2C3037;
     --surface-high: #37393E;
@@ -105,7 +105,7 @@
     --text-green: var(--color-secondary);
     --text-red: var(--color-error);
 
-    --border-color: var(--color-surface-container-highest);
+    --border-color: #272C35;
     --border-accent: var(--color-primary-container);
     --border-focus: var(--color-primary-container);
 
@@ -167,6 +167,7 @@
    ========================================================= */
 *, *::before, *::after {
     box-sizing: border-box;
+    border-color: transparent;
 }
 
 html, body {

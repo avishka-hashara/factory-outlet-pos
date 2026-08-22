@@ -1,15 +1,17 @@
 @extends('layouts.pos')
 @section('title', 'Dashboard')
 
+@section('main-class', 'p-3.5 lg:p-4 pb-8 overflow-y-auto')
+
 @section('content')
 <div x-data="dashboardApp(@js($metrics), '{{ $range }}')"
      x-init="initDashboard()"
-     class="h-[calc(100vh-56px)] max-h-[calc(100vh-56px)] overflow-hidden flex flex-col justify-between px-5 py-3.5 max-w-[1600px] mx-auto box-border select-none gap-3.5">
+     class="w-full flex flex-col select-none gap-3.5 box-border">
 
     <!-- ===== Page Header ===== -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0">
         <div class="flex items-baseline gap-3">
-            <h1 class="font-headline-lg text-[22px] text-on-surface m-0 font-bold tracking-tight">Dashboard</h1>
+            <h1 class="font-headline-lg text-[20px] lg:text-[22px] text-on-surface m-0 font-bold tracking-tight">Dashboard</h1>
             <p class="font-body-sm text-[12px] text-on-surface-variant m-0">Live Performance Overview</p>
         </div>
 
@@ -17,10 +19,10 @@
         <x-dashboard.range-selector :current-range="$range" />
     </div>
 
-    <!-- ===== KPI Row (4-up, ~110px height) ===== -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0"
+    <!-- ===== KPI Row (4-up) ===== -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3.5 shrink-0"
          :class="isLoading ? 'opacity-60 transition-opacity' : ''">
-        <!-- KPI 1: Sales (Subtle radial highlight, 34px value, 110px height) -->
+        <!-- KPI 1: Sales -->
         <x-dashboard.stat-card
             title="Today's Sales"
             icon="payments"
@@ -66,8 +68,8 @@
         />
     </div>
 
-    <!-- ===== Charts Row (8 / 4 Split, ~300px height) ===== -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 shrink-0 min-h-[300px] max-h-[310px]"
+    <!-- ===== Charts Row (8 / 4 Split) ===== -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5"
          :class="isLoading ? 'opacity-60 transition-opacity' : ''">
         <!-- Sales Trend Area Chart (8 Cols) -->
         <x-dashboard.sales-trend-chart :trend="$metrics['trend']" />
@@ -76,14 +78,14 @@
         <x-dashboard.payment-mix-donut :payment-mix="$metrics['payment_mix']" />
     </div>
 
-    <!-- ===== Bottom Row (2fr / 1fr Split, gap 20px) ===== -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0"
+    <!-- ===== Bottom Row (2fr / 1fr Split) ===== -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-3.5"
          :class="isLoading ? 'opacity-60 transition-opacity' : ''">
         <!-- Recent Transactions Table (2fr / 2 cols) -->
         <x-dashboard.recent-transactions-table :recent-transactions="$metrics['recent_transactions']" />
 
         <!-- Stack of Stock Alerts & Drawer Status (1fr / 1 col) -->
-        <div class="flex flex-col gap-3.5 h-full">
+        <div class="flex flex-col gap-3 lg:gap-3.5 h-full">
             <!-- Stock Alerts Panel -->
             <x-dashboard.stock-alerts-panel :stock-alerts="$metrics['stock_alerts']" />
 
@@ -178,50 +180,91 @@ function dashboardApp(initialMetrics, initialRange) {
             const curVals = (this.metrics?.trend?.current || []).map(p => Number(p.value) || 0);
             const compVals = (this.metrics?.trend?.comparison || []).map(p => Number(p.value) || 0);
             const peak = Math.max(...curVals, ...compVals, 1000);
+            if (peak <= 5000) return 5000;
+            if (peak <= 10000) return 10000;
+            if (peak <= 15000) return 15000;
             if (peak <= 20000) return 20000;
+            if (peak <= 30000) return 30000;
             if (peak <= 40000) return 40000;
+            if (peak <= 50000) return 50000;
             if (peak <= 60000) return 60000;
             return Math.ceil(peak / 20000) * 20000;
         },
 
         get trendMaxLabel() {
-            return (this.trendMaxVal / 1000) + 'k';
+            return this.trendMaxVal >= 1000 ? (this.trendMaxVal / 1000) + 'k' : this.trendMaxVal;
         },
         get trendMidHighLabel() {
-            return (this.trendMaxVal * 0.75 / 1000) + 'k';
+            const v = this.trendMaxVal * 0.75;
+            return v >= 1000 ? (v % 1000 === 0 ? (v / 1000) : (v / 1000).toFixed(1)) + 'k' : Math.round(v);
         },
         get trendMidLabel() {
-            return (this.trendMaxVal * 0.5 / 1000) + 'k';
+            const v = this.trendMaxVal * 0.5;
+            return v >= 1000 ? (v % 1000 === 0 ? (v / 1000) : (v / 1000).toFixed(1)) + 'k' : Math.round(v);
         },
         get trendMidLowLabel() {
-            return (this.trendMaxVal * 0.25 / 1000) + 'k';
+            const v = this.trendMaxVal * 0.25;
+            return v >= 1000 ? (v % 1000 === 0 ? (v / 1000) : (v / 1000).toFixed(1)) + 'k' : Math.round(v);
         },
 
-        // Smooth cubic Bezier spline generator
+        // Monotone Cubic Spline (Fritsch-Carlson algorithm) to prevent overshoot humps
         getSmoothPath(pts, max) {
             if (!pts || !pts.length) return 'M 0 100 L 100 100';
-            if (pts.length === 1) return `M 0 ${100 - (pts[0].value / max) * 90} L 100 ${100 - (pts[0].value / max) * 90}`;
+            if (pts.length === 1) {
+                const y = Math.max(5, Math.min(95, 100 - ((Number(pts[0].value) || 0) / max) * 90));
+                return `M 0 ${y.toFixed(2)} L 100 ${y.toFixed(2)}`;
+            }
 
-            const step = 100 / (pts.length - 1);
+            const n = pts.length;
+            const step = 100 / (n - 1);
             const coords = pts.map((p, i) => ({
                 x: i * step,
                 y: Math.max(5, Math.min(95, 100 - ((Number(p.value) || 0) / max) * 90))
             }));
 
+            // 1. Secant slopes
+            const deltas = new Array(n - 1);
+            for (let i = 0; i < n - 1; i++) {
+                deltas[i] = (coords[i + 1].y - coords[i].y) / (coords[i + 1].x - coords[i].x);
+            }
+
+            // 2. Initial tangents
+            const m = new Array(n);
+            m[0] = deltas[0];
+            for (let i = 1; i < n - 1; i++) {
+                m[i] = (deltas[i - 1] + deltas[i]) / 2;
+            }
+            m[n - 1] = deltas[n - 2];
+
+            // 3. Fritsch-Carlson monotone slope adjustments
+            for (let i = 0; i < n - 1; i++) {
+                if (Math.abs(deltas[i]) < 1e-7) {
+                    m[i] = 0;
+                    m[i + 1] = 0;
+                } else {
+                    const alpha = m[i] / deltas[i];
+                    const beta = m[i + 1] / deltas[i];
+                    if (alpha < 0) m[i] = 0;
+                    if (beta < 0) m[i + 1] = 0;
+                    const dist = alpha * alpha + beta * beta;
+                    if (dist > 9) {
+                        const tau = 3 / Math.sqrt(dist);
+                        m[i] = tau * alpha * deltas[i];
+                        m[i + 1] = tau * beta * deltas[i];
+                    }
+                }
+            }
+
+            // 4. Cubic Bezier path
             let d = `M ${coords[0].x.toFixed(2)} ${coords[0].y.toFixed(2)}`;
+            for (let i = 0; i < n - 1; i++) {
+                const dx = coords[i + 1].x - coords[i].x;
+                const cp1x = coords[i].x + dx / 3;
+                const cp1y = coords[i].y + (m[i] * dx) / 3;
+                const cp2x = coords[i + 1].x - dx / 3;
+                const cp2y = coords[i + 1].y - (m[i + 1] * dx) / 3;
 
-            for (let i = 0; i < coords.length - 1; i++) {
-                const p0 = i > 0 ? coords[i - 1] : coords[i];
-                const p1 = coords[i];
-                const p2 = coords[i + 1];
-                const p3 = i < coords.length - 2 ? coords[i + 2] : p2;
-
-                const cp1x = p1.x + (p2.x - p0.x) / 6;
-                const cp1y = p1.y + (p2.y - p0.y) / 6;
-                const cp2x = p2.x - (p3.x - p1.x) / 6;
-                const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-                d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+                d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${coords[i + 1].x.toFixed(2)} ${coords[i + 1].y.toFixed(2)}`;
             }
             return d;
         },

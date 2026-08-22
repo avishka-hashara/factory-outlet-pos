@@ -7,8 +7,9 @@ export default {
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
-        './resources/views/**/*.blade.php',
-        './resources/js/**/*.js',
+        './resources/**/*.blade.php',
+        './resources/**/*.js',
+        './app/**/*.php',
     ],
 
     theme: {
@@ -24,7 +25,7 @@ export default {
                 'surface-container-high': '#222b36',
                 'surface-container-highest': '#2d3542',
                 'surface-variant': '#2d3542',
-                'on-surface': '#dae3f3',
+                'on-surface': '#FFFFFF',
                 'on-surface-variant': '#d7c3ae',
                 'inverse-surface': '#dae3f3',
                 'inverse-on-surface': '#28313d',

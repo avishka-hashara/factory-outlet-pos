@@ -1,10 +1,10 @@
 @props(['recentTransactions' => []])
 
-<div class="lg:col-span-2 bg-card-surface border rounded-card p-4 flex flex-col justify-between select-none box-border min-h-[265px]"
-     style="border-color: rgba(255, 255, 255, 0.06);">
+<div class="lg:col-span-2 flex flex-col justify-between select-none box-border min-h-[300px] rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border-0"
+     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
     <!-- Card Header -->
     <div class="flex justify-between items-center mb-2">
-        <h2 class="font-headline-md text-[15px] text-on-surface m-0 font-semibold tracking-tight">Recent Transactions</h2>
+        <h2 class="font-headline-md text-[14px] lg:text-[15px] text-on-surface m-0 font-semibold tracking-tight">Recent Transactions</h2>
         <a href="{{ route('pos.log') }}" class="text-primary font-label-caps text-[11px] uppercase hover:underline no-underline font-bold tracking-wider">View All</a>
     </div>
 
@@ -12,31 +12,31 @@
     <div class="overflow-x-auto custom-scrollbar flex-1 flex flex-col justify-between">
         <table class="w-full text-left border-collapse text-body-sm">
             <thead>
-                <tr class="border-b border-border-color/60 text-on-surface-variant font-label-caps text-[10px] uppercase">
-                    <th class="py-1.5 px-2 font-bold tracking-wider">Bill #</th>
-                    <th class="py-1.5 px-2 font-bold tracking-wider">Time</th>
-                    <th class="py-1.5 px-2 font-bold tracking-wider">Customer / Items</th>
-                    <th class="py-1.5 px-2 font-bold tracking-wider">Status</th>
-                    <th class="py-1.5 px-2 font-bold tracking-wider text-right">Amount</th>
+                <tr class="border-b border-[#272C35] text-on-surface-variant font-label-caps text-[10px] uppercase">
+                    <th class="py-1.5 px-2.5 font-bold tracking-wider">Bill #</th>
+                    <th class="py-1.5 px-2.5 font-bold tracking-wider">Time</th>
+                    <th class="py-1.5 px-2.5 font-bold tracking-wider">Customer / Items</th>
+                    <th class="py-1.5 px-2.5 font-bold tracking-wider">Status</th>
+                    <th class="py-1.5 px-2.5 font-bold tracking-wider text-right">Amount</th>
                 </tr>
             </thead>
             <tbody>
                 <template x-for="tx in ((metrics?.recent_transactions ?? @js($recentTransactions)).slice(0, 4))" :key="tx.id">
                     <tr @click="window.location.href = tx.invoice_url"
-                        class="border-b border-border-color/40 last:border-0 hover:bg-hover-surface transition-colors cursor-pointer group"
+                        class="border-b border-[#272C35]/50 last:border-0 hover:bg-[#1E222A] transition-colors cursor-pointer group"
                         :class="tx.status === 'Pending' ? 'bg-amber-accent/5' : ''">
                         
                         <!-- Bill Number -->
-                        <td class="py-2 px-2 font-metric-sm text-on-surface group-hover:text-amber-accent transition-colors tabular-nums font-bold text-[12px]"
+                        <td class="py-2 px-2.5 font-metric-sm text-on-surface group-hover:text-amber-accent transition-colors tabular-nums font-bold text-[12px]"
                             x-text="tx.bill_number"></td>
 
                         <!-- Time -->
-                        <td class="py-2 px-2 text-on-surface-variant text-[11px] tabular-nums"
+                        <td class="py-2 px-2.5 text-on-surface-variant text-[11px] tabular-nums"
                             x-text="tx.time"></td>
 
                         <!-- Customer & Items -->
-                        <td class="py-2 px-2">
-                            <div class="flex items-center gap-1.5">
+                        <td class="py-2 px-2.5">
+                            <div class="flex items-center gap-2">
                                 <span class="w-5 h-5 rounded-full bg-surface-variant flex items-center justify-center text-[9px] font-bold text-on-surface uppercase flex-shrink-0"
                                       x-text="tx.customer_initials"></span>
                                 <span class="text-on-surface truncate max-w-[180px] text-[12px] font-medium"

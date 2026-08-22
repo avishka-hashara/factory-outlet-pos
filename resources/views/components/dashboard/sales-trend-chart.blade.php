@@ -1,9 +1,9 @@
 @props(['trend' => []])
 
-<div class="lg:col-span-8 bg-card-surface border rounded-card p-md flex flex-col justify-between min-h-[300px] max-h-[310px] select-none box-border"
-     style="border-color: rgba(255, 255, 255, 0.06);">
+<div class="lg:col-span-8 flex flex-col justify-between min-h-[310px] select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border-0"
+     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
     <div class="flex justify-between items-center mb-2">
-        <h2 class="font-headline-md text-[15px] text-on-surface m-0 font-semibold tracking-tight">Sales Trend</h2>
+        <h2 class="font-headline-md text-[14px] lg:text-[15px] text-on-surface m-0 font-semibold tracking-tight">Sales Trend</h2>
         <div class="flex items-center gap-3">
             <span class="flex items-center gap-1.5 text-[10px] text-on-surface-variant font-label-caps uppercase font-bold">
                 <span class="w-2 h-2 rounded-full bg-amber-accent"></span>
@@ -19,11 +19,11 @@
         </div>
     </div>
 
-    <!-- Chart Canvas Area (Height ~220px inside ~300px card) -->
-    <div class="flex-1 relative w-full h-[220px] min-h-[200px] border-b border-l border-border-color flex items-end pt-3 pr-2 pl-9 pb-6">
+    <!-- Chart Canvas Area -->
+    <div class="flex-1 relative w-full min-h-[200px] border-b border-l border-[#272C35] flex items-end pt-2 pr-2 pl-9 pb-6">
         
-        <!-- Y-Axis Labels (Auto-scaled derived from data: 20k, 15k, 10k, 5k, 0) -->
-        <div class="absolute left-1 top-2 bottom-6 flex flex-col justify-between text-on-surface-variant font-label-caps text-[9px] py-0.5 select-none pointer-events-none text-right w-6">
+        <!-- Y-Axis Labels (Auto-scaled derived from data) -->
+        <div class="absolute left-1 top-1 bottom-6 flex flex-col justify-between text-on-surface-variant font-label-caps text-[9px] py-0.5 select-none pointer-events-none text-right w-6">
             <span x-text="trendMaxLabel">20k</span>
             <span x-text="trendMidHighLabel">15k</span>
             <span x-text="trendMidLabel">10k</span>
@@ -32,15 +32,15 @@
         </div>
 
         <!-- Horizontal Grid Lines -->
-        <div class="absolute inset-0 pl-9 pr-2 pb-6 pt-3 flex flex-col justify-between pointer-events-none">
-            <div class="border-t border-border-color/20 w-full h-0"></div>
-            <div class="border-t border-border-color/20 w-full h-0"></div>
-            <div class="border-t border-border-color/20 w-full h-0"></div>
-            <div class="border-t border-border-color/20 w-full h-0"></div>
+        <div class="absolute inset-0 pl-9 pr-2 pb-6 pt-2 flex flex-col justify-between pointer-events-none">
+            <div class="border-t border-[#272C35]/50 w-full h-0"></div>
+            <div class="border-t border-[#272C35]/50 w-full h-0"></div>
+            <div class="border-t border-[#272C35]/50 w-full h-0"></div>
+            <div class="border-t border-[#272C35]/50 w-full h-0"></div>
         </div>
 
         <!-- Dynamic SVG Area Chart with Smooth Monotone Curves -->
-        <div class="absolute inset-0 pl-9 pr-2 pb-6 pt-3 overflow-hidden">
+        <div class="absolute inset-0 pl-9 pr-2 pb-6 pt-2 overflow-hidden">
             <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
                 <defs>
                     <linearGradient id="trendChartGrad" x1="0" y1="0" x2="0" y2="1">

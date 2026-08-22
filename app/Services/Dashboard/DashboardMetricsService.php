@@ -164,6 +164,10 @@ class DashboardMetricsService
                 $ydaySales  = Sale::whereDate('created_at', $ydayDate)->get(['created_at', 'total']);
 
                 // Build 30-minute intervals across 08:00 to 20:00 (25 slots)
+                // Continuous cumulative running total that rises across the day
+                $runningToday = 0.0;
+                $runningYday  = 0.0;
+
                 for ($h = 8; $h <= 20; $h++) {
                     for ($m = 0; $m < 60; $m += 30) {
                         if ($h === 20 && $m > 0) {
@@ -186,13 +190,16 @@ class DashboardMetricsService
                             return $timeMin >= $slotStart && $timeMin < $slotEnd;
                         })->sum('total');
 
+                        $runningToday += (float) $tVal;
+                        $runningYday  += (float) $yVal;
+
                         $currentSeries[] = [
                             'label' => $slotLabel,
-                            'value' => round((float) $tVal, 2),
+                            'value' => round($runningToday, 2),
                         ];
                         $comparisonSeries[] = [
                             'label' => $slotLabel,
-                            'value' => round((float) $yVal, 2),
+                            'value' => round($runningYday, 2),
                         ];
                     }
                 }

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&family=Inter:wght@400;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
 @tailwind base;
@@ -7,6 +7,14 @@
 
 @layer base {
     :root {
+        --dark-bg:           #0E1013;
+        --card-surface:      #171A20;
+        --border-color:      #272C35;
+        --hover-surface:     #1E222A;
+        --amber-accent:      #F5A623;
+        --on-surface:        #FFFFFF;
+        --on-surface-variant:#d7c3ae;
+
         --surface: #0b141f;
         --surface-dim: #0b141f;
         --surface-bright: #313a46;
@@ -16,8 +24,6 @@
         --surface-container-high: #222b36;
         --surface-container-highest: #2d3542;
         --surface-variant: #2d3542;
-        --on-surface: #dae3f3;
-        --on-surface-variant: #d7c3ae;
         --inverse-surface: #dae3f3;
         --inverse-on-surface: #28313d;
         --outline: #9f8e7a;
@@ -43,13 +49,6 @@
         --background: #0b141f;
         --on-background: #dae3f3;
 
-        /* Code.html Mock & Utility Aliases */
-        --amber-accent: #F5A623;
-        --dark-bg: #0E1013;
-        --card-surface: #171A20;
-        --border-color: #272C35;
-        --hover-surface: #1E222A;
-
         /* Compatibility Aliases */
         --surface-muted: #2C3037;
         --surface-high: #222B36;
@@ -57,6 +56,10 @@
         --primary-text: #F5A524;
         --success: #22C55E;
         --error-solid: #EF4444;
+    }
+
+    *, ::before, ::after {
+        border-color: transparent;
     }
 
     body {
@@ -75,6 +78,21 @@
     }
     .material-symbols-outlined.filled {
         font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+    }
+
+    .pos-global-rail .rail-label,
+    #pos-icon-rail .rail-label {
+        font-size: 9px !important;
+        line-height: 12px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.5px !important;
+        text-transform: uppercase !important;
+        color: var(--on-surface-variant, #d7c3ae) !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        display: block !important;
+        margin-top: 2px !important;
     }
 }
 

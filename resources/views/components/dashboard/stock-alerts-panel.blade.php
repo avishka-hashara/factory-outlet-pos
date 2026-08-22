@@ -1,10 +1,10 @@
 @props(['stockAlerts' => []])
 
-<div class="bg-card-surface border rounded-card p-3.5 flex flex-col justify-between select-none box-border flex-1 min-h-[125px]"
-     style="border-color: rgba(255, 255, 255, 0.06);">
-    <div class="flex justify-between items-center mb-1.5">
+<div class="flex flex-col justify-between select-none box-border rounded-[8px] p-3.5 lg:p-4 bg-[#171A20] border-0 min-h-[145px]"
+     style="background-color: #171A20; border: none; outline: none; box-shadow: none;">
+    <div class="flex justify-between items-center mb-2">
         <div class="flex items-center gap-2">
-            <h2 class="font-headline-md text-[14px] text-on-surface m-0 font-semibold tracking-tight">Stock Alerts</h2>
+            <h2 class="font-headline-md text-[13px] lg:text-[14px] text-on-surface m-0 font-semibold tracking-tight">Stock Alerts</h2>
             <span class="bg-red-500/15 text-red-400 border border-red-500/25 text-[10px] font-bold px-2 py-0.5 rounded-full leading-none tabular-nums"
                   x-text="metrics?.stock_alerts?.critical_label ?? '{{ $stockAlerts['critical_label'] ?? '0 Critical' }}'">
                 {{ $stockAlerts['critical_label'] ?? '0 Critical' }}
@@ -13,12 +13,12 @@
         <a href="{{ route('products.index', ['stock' => 'low']) }}" class="text-primary font-label-caps text-[11px] uppercase hover:underline no-underline font-bold tracking-wider">Inv</a>
     </div>
 
-    <div class="flex flex-col gap-1.5 overflow-hidden">
+    <div class="flex flex-col gap-1.5">
         <template x-for="item in ((metrics?.stock_alerts?.items ?? @js($stockAlerts['items'] ?? [])).slice(0, 2))" :key="item.id">
-            <div class="flex items-center justify-between py-1 border-b border-border-color/40 last:border-0 group hover:bg-hover-surface/40 rounded px-1 transition-colors">
-                <div class="flex items-center gap-2 min-w-0">
+            <div class="flex items-center justify-between py-1.5 border-b border-[#272C35]/50 last:border-0 group hover:bg-[#1E222A] rounded px-1.5 transition-colors">
+                <div class="flex items-center gap-2.5 min-w-0">
                     <!-- Thumbnail or fallback -->
-                    <div class="w-7 h-7 rounded bg-surface-variant border border-border-color flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div class="w-7 h-7 rounded bg-surface-variant border border-[#272C35] flex items-center justify-center overflow-hidden flex-shrink-0">
                         <template x-if="item.image_url">
                             <img :src="item.image_url" :alt="item.name" class="w-full h-full object-cover" loading="lazy">
                         </template>
@@ -27,14 +27,14 @@
                         </template>
                     </div>
                     <div class="min-w-0">
-                        <div class="font-metric-sm text-[11px] text-on-surface leading-tight group-hover:text-amber-accent transition-colors truncate font-medium"
+                        <div class="font-metric-sm text-[12px] text-on-surface leading-tight group-hover:text-amber-accent transition-colors truncate font-medium"
                              x-text="item.name"></div>
-                        <div class="font-body-sm text-[9px] text-on-surface-variant tabular-nums truncate"
+                        <div class="font-body-sm text-[10px] text-on-surface-variant tabular-nums truncate mt-0.5"
                              x-text="'SKU: ' + item.sku"></div>
                     </div>
                 </div>
 
-                <div class="font-metric-sm text-[13px] tabular-nums font-bold flex-shrink-0 ml-2"
+                <div class="font-metric-sm text-[13px] tabular-nums font-bold flex-shrink-0 ml-2 whitespace-nowrap"
                      :class="item.stock <= 0 ? 'text-red-500' : 'text-red-400'">
                     <span x-text="item.stock"></span>
                     <span class="text-[9px] font-normal text-on-surface-variant ml-0.5">left</span>

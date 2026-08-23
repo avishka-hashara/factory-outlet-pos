@@ -213,45 +213,64 @@ class CashDrawerController extends Controller
             ->with('user')
             ->get()
             ->map(fn (CashDrawerTransaction $tx) => [
+                'id'          => 'tx-' . $tx->id,
                 'source'      => 'manual',
                 'type'        => $tx->type,
                 'description' => $tx->description,
                 'amount'      => (float) $tx->amount,
                 'user_name'   => $tx->user?->name,
                 'created_at'  => $tx->created_at,
+                'sale_id'     => null,
+                'invoice_url' => null,
             ]);
 
         $sales = $this->sessionCashSales($session)
             ->get()
             ->filter(fn (Sale $sale) => $sale->cash_paid_amount > 0)
             ->map(fn (Sale $sale) => [
+                'id'          => 'sale-' . $sale->id,
                 'source'      => 'sale',
                 'type'        => 'cash_sale',
                 'description' => 'POS Sale #' . ($sale->invoice_number ?: $sale->id),
-                'amount'      => $sale->cash_paid_amount,
+                'amount'      => (float) $sale->cash_paid_amount,
                 'user_name'   => $sale->user?->name,
                 'created_at'  => $sale->created_at,
+                'sale_id'     => $sale->id,
+                'invoice_url' => route('sales.index', ['invoice' => $sale->invoice_number ?: $sale->id]),
             ]);
 
         $refunds = $this->sessionCashRefunds($session)
             ->get()
             ->map(fn (ProductReturn $return) => [
+                'id'          => 'ref-' . $return->id,
                 'source'      => 'refund',
                 'type'        => 'cash_refund',
                 'description' => 'Cash Refund for Sale #' . ($return->sale?->invoice_number ?: $return->sale_id),
                 'amount'      => (float) $return->total_refunded,
                 'user_name'   => $return->user?->name,
                 'created_at'  => $return->created_at,
+                'sale_id'     => $return->sale_id,
+                'invoice_url' => route('returns.index', ['search' => $return->sale?->invoice_number ?: $return->sale_id]),
             ]);
 
-        return $manual
-            ->concat($sales)
-            ->concat($refunds)
-            ->sortByDesc('created_at')
-            ->map(fn (array $tx) => new Fluent($tx + [
-                'user' => new Fluent(['name' => $tx['user_name']]),
-            ]))
-            ->values();
+        // Calculate running balance chronologically (oldest to newest)
+        $sortedAsc = $manual->concat($sales)->concat($refunds)->sortBy('created_at')->values();
+        $running = (float) $session->opening_balance;
+        $withRunning = $sortedAsc->map(function ($item) use (&$running) {
+            $isPositive = in_array($item['type'], ['cash_in', 'cash_sale'], true);
+            if ($isPositive) {
+                $running += $item['amount'];
+            } else {
+                $running -= $item['amount'];
+            }
+            $item['running_balance'] = max(0, $running);
+            return $item;
+        });
+
+        // Return newest first for display
+        return $withRunning->sortByDesc('created_at')->values()->map(fn (array $tx) => new Fluent($tx + [
+            'user' => new Fluent(['name' => $tx['user_name']]),
+        ]));
     }
 
     private function sessionCashSales(CashDrawerSession $session)

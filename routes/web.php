@@ -254,7 +254,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/reports/export-pdf', [App\Http\Controllers\ReportsController::class, 'exportPdf'])->name('reports.exportPdf');
     Route::get('/reports/export-excel', [App\Http\Controllers\ReportsController::class, 'exportExcel'])->name('reports.exportExcel');
 
-    // Cash Drawer
+    // Cash Drawer (accessible via /cash-drawer and /drawer)
+    Route::get('/drawer', fn() => redirect()->route('cash-drawer.index'))->middleware('permission:cash_drawer');
     Route::get('/cash-drawer', [CashDrawerController::class, 'index'])->middleware('permission:cash_drawer')->name('cash-drawer.index');
     Route::post('/cash-drawer/open', [CashDrawerController::class, 'open'])->name('cash-drawer.open');
     Route::post('/cash-drawer/close', [CashDrawerController::class, 'close'])->name('cash-drawer.close');

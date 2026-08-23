@@ -31,10 +31,13 @@ class CustomerController extends Controller
 
     public function index(Request $request)
     {
-        $query = Customer::query();
+        $query = Customer::withCount('sales')
+            ->withSum('sales', 'total')
+            ->withMax('sales', 'created_at')
+            ->with(['sales' => fn($q) => $q->latest()->take(5)->with('items.product')]);
 
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = trim($request->search);
             $query->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
                   ->orWhere('phone', 'like', "%{$s}%")
@@ -42,17 +45,70 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $query->orderBy('name')->paginate(20)->withQueryString();
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Sorting
+        $sort = $request->get('sort', 'spent_desc');
+        switch ($sort) {
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'orders_desc':
+                $query->orderByDesc('sales_count');
+                break;
+            case 'recent_visit':
+                $query->orderByRaw('sales_max_created_at IS NULL, sales_max_created_at DESC');
+                break;
+            case 'newest':
+                $query->latest('id');
+                break;
+            case 'spent_asc':
+                $query->orderBy('sales_sum_total', 'asc');
+                break;
+            case 'spent_desc':
+            default:
+                $query->orderByRaw('sales_sum_total IS NULL, sales_sum_total DESC');
+                break;
+        }
+
+        $customers = $query->paginate(20)->withQueryString();
         
         // KPI Stats
         $totalCustomers = Customer::count();
-        $newThisMonth = Customer::whereMonth('created_at', now()->month)
-                                ->whereYear('created_at', now()->year)
-                                ->count();
+        $newThisMonth   = Customer::whereMonth('created_at', now()->month)
+                                  ->whereYear('created_at', now()->year)
+                                  ->count();
         
-        $totalRevenue = \App\Models\Sale::whereNotNull('customer_id')->sum('total');
+        $lastMonthDate  = now()->subMonth();
+        $newLastMonth   = Customer::whereMonth('created_at', $lastMonthDate->month)
+                                  ->whereYear('created_at', $lastMonthDate->year)
+                                  ->count();
+        
+        $monthDelta = $newLastMonth > 0 ? round((($newThisMonth - $newLastMonth) / $newLastMonth) * 100, 1) : null;
 
-        return view('customers.index', compact('customers', 'totalCustomers', 'newThisMonth', 'totalRevenue'));
+        $totalStoreRevenue = (float) \App\Models\Sale::sum('total');
+        $linkedRevenue     = (float) \App\Models\Sale::whereNotNull('customer_id')->sum('total');
+        $linkedPercent     = $totalStoreRevenue > 0 ? round(($linkedRevenue / $totalStoreRevenue) * 100, 1) : 0.0;
+        $avgCustomerValue  = $totalCustomers > 0 ? round($linkedRevenue / $totalCustomers, 2) : 0.0;
+
+        $totalAllCustomers = $totalCustomers;
+
+        return view('customers.index', compact(
+            'customers',
+            'totalCustomers',
+            'newThisMonth',
+            'monthDelta',
+            'linkedRevenue',
+            'totalStoreRevenue',
+            'linkedPercent',
+            'avgCustomerValue',
+            'totalAllCustomers'
+        ));
     }
 
     public function show(Customer $customer)

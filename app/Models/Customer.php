@@ -23,6 +23,27 @@ class Customer extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function getTierAttribute(): string
+    {
+        $spent = (float) ($this->sales_sum_total ?? $this->sales()->sum('total'));
+        if ($spent >= 100000) return 'Platinum';
+        if ($spent >= 50000)  return 'Gold';
+        if ($spent >= 20000)  return 'Silver';
+        return 'Bronze';
+    }
+
+    public function getCustomerTypeAttribute(): string
+    {
+        if (empty($this->phone) && empty($this->name)) {
+            return 'Walk-in';
+        }
+        $spent = (float) ($this->sales_sum_total ?? $this->sales()->sum('total'));
+        if ($spent >= 150000) {
+            return 'Wholesale';
+        }
+        return 'Retail';
+    }
+
     /**
      * Canonicalise the phone on write so the same number in any format
      * (0771234567 / 94771234567 / +94771234567) is always stored one way and

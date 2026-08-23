@@ -313,8 +313,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/cash-drawer/cash-out', [CashDrawerController::class, 'cashOut'])->name('cash-drawer.cashOut');
     Route::get('/cash-drawer/session/{session}', [CashDrawerController::class, 'sessionDetail'])->name('cash-drawer.session');
 
-    // Gift Cards management (admin/manager via 'gift_cards' permission)
+    // Gift Cards management (accessible via /gift-cards and /gifts)
     Route::middleware('permission:gift_cards')->group(function () {
+        Route::get('/gifts', fn() => redirect()->route('gift-cards.index'));
         Route::get('/gift-cards', [App\Http\Controllers\GiftCardController::class, 'index'])->name('gift-cards.index');
         Route::get('/gift-cards/template', [App\Http\Controllers\GiftCardController::class, 'template'])->name('gift-cards.template');
         Route::post('/gift-cards', [App\Http\Controllers\GiftCardController::class, 'store'])->name('gift-cards.store');

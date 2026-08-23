@@ -11,19 +11,34 @@ use Illuminate\Support\Facades\DB;
 class GiftCardController extends Controller
 {
     /**
-     * Sidebar dashboard: counts, list + search with live computed status.
+     * Dashboard: counts, list + search with live computed status and KPIs.
      */
     public function index(Request $request)
     {
+        $nowDate = now()->toDateString();
+
         $counts = [
-            'total' => GiftCard::count(),
+            'total'     => GiftCard::count(),
             'available' => GiftCard::where('status', GiftCard::STATUS_AVAILABLE)->count(),
-            'sold' => GiftCard::where('status', GiftCard::STATUS_SOLD)->count(),
-            'gifted' => GiftCard::where('status', GiftCard::STATUS_GIFTED)->count(),
-            'redeemed' => GiftCard::where('status', GiftCard::STATUS_REDEEMED)->count(),
+            'sold'      => GiftCard::where('status', GiftCard::STATUS_SOLD)->count(),
+            'gifted'    => GiftCard::where('status', GiftCard::STATUS_GIFTED)->count(),
+            'redeemed'  => GiftCard::where('status', GiftCard::STATUS_REDEEMED)->count(),
+            'expired'   => GiftCard::whereIn('status', [GiftCard::STATUS_SOLD, GiftCard::STATUS_GIFTED])
+                                    ->whereNotNull('expiry_date')
+                                    ->whereDate('expiry_date', '<', $nowDate)
+                                    ->count(),
+            'cancelled' => GiftCard::where('status', GiftCard::STATUS_CANCELLED)->count(),
         ];
 
-        $query = GiftCard::with(['issuedSale', 'redeemedSale'])->latest('id');
+        // Outstanding Balance (unredeemed liability: active sold or gifted cards not yet redeemed and not expired)
+        $outstandingBalance = (float) GiftCard::whereIn('status', [GiftCard::STATUS_SOLD, GiftCard::STATUS_GIFTED])
+            ->whereNull('redeemed_at')
+            ->where(function ($q) use ($nowDate) {
+                $q->whereNull('expiry_date')->orWhereDate('expiry_date', '>=', $nowDate);
+            })
+            ->sum('value');
+
+        $query = GiftCard::with(['issuedSale.customer', 'redeemedSale.customer']);
 
         if ($request->filled('search')) {
             $s = trim($request->search);
@@ -33,13 +48,55 @@ class GiftCardController extends Controller
             });
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('status') && $request->status !== 'all') {
+            $st = $request->status;
+            if ($st === 'expired') {
+                $query->whereIn('status', [GiftCard::STATUS_SOLD, GiftCard::STATUS_GIFTED])
+                      ->whereNotNull('expiry_date')
+                      ->whereDate('expiry_date', '<', $nowDate);
+            } else {
+                $query->where('status', $st);
+            }
         }
 
-        $cards = $query->paginate(15)->withQueryString();
+        if ($request->filled('date_from')) {
+            $query->whereDate('issued_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('issued_date', '<=', $request->date_to);
+        }
 
-        return view('gift-cards.index', compact('counts', 'cards'));
+        // Sorting
+        $sort = $request->get('sort', 'created_desc');
+        switch ($sort) {
+            case 'value_asc':
+                $query->orderBy('value', 'asc');
+                break;
+            case 'value_desc':
+                $query->orderBy('value', 'desc');
+                break;
+            case 'expiry_asc':
+                $query->orderByRaw('expiry_date IS NULL, expiry_date ASC');
+                break;
+            case 'expiry_desc':
+                $query->orderByRaw('expiry_date DESC');
+                break;
+            case 'issued_asc':
+                $query->orderBy('issued_date', 'asc');
+                break;
+            case 'issued_desc':
+                $query->orderBy('issued_date', 'desc');
+                break;
+            case 'created_desc':
+            default:
+                $query->latest('id');
+                break;
+        }
+
+        $cards = $query->paginate(20)->withQueryString();
+        $totalAllCards = GiftCard::count();
+
+        return view('gift-cards.index', compact('counts', 'cards', 'outstandingBalance', 'totalAllCards'));
     }
 
     /**

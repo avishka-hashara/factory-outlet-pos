@@ -14,12 +14,28 @@ use Illuminate\Support\Facades\DB;
 class ReturnController extends Controller
 {
     /**
-     * List all returns (admin only).
+     * List all returns.
      */
     public function index(Request $request)
     {
-        $query = ProductReturn::with(['sale', 'user', 'items.product', 'items.variant'])->latest();
+        $query = ProductReturn::with(['sale.customer', 'user', 'items.product', 'items.variant'])->latest();
 
+        if ($request->filled('search')) {
+            $s = trim($request->search);
+            $query->where(function ($q) use ($s) {
+                $q->where('id', is_numeric($s) ? (int) $s : 0)
+                  ->orWhereHas('sale', function ($sq) use ($s) {
+                      $sq->where('invoice_number', 'like', "%{$s}%")
+                         ->orWhere('id', is_numeric($s) ? (int) $s : 0)
+                         ->orWhereHas('customer', function ($cq) use ($s) {
+                             $cq->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%");
+                         });
+                  })
+                  ->orWhereHas('items.product', function ($pq) use ($s) {
+                      $pq->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%");
+                  });
+            });
+        }
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -32,17 +48,74 @@ class ReturnController extends Controller
         if ($request->filled('refund_method')) {
             $query->where('refund_method', $request->refund_method);
         }
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
 
         $returns = $query->paginate(20)->withQueryString();
 
-        $totalRefunded = ProductReturn::where('status', 'completed')
-            ->when($request->filled('date_from'), fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
-            ->when($request->filled('date_to'),   fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
-            ->sum('total_refunded');
+        // Calculate KPI Metrics
+        $statsQuery = ProductReturn::query();
+        if ($request->filled('search')) {
+            $s = trim($request->search);
+            $statsQuery->where(function ($q) use ($s) {
+                $q->where('id', is_numeric($s) ? (int) $s : 0)
+                  ->orWhereHas('sale', function ($sq) use ($s) {
+                      $sq->where('invoice_number', 'like', "%{$s}%")
+                         ->orWhere('id', is_numeric($s) ? (int) $s : 0)
+                         ->orWhereHas('customer', function ($cq) use ($s) {
+                             $cq->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%");
+                         });
+                  })
+                  ->orWhereHas('items.product', function ($pq) use ($s) {
+                      $pq->where('name', 'like', "%{$s}%")->orWhere('sku', 'like', "%{$s}%");
+                  });
+            });
+        }
+        if ($request->filled('date_from')) {
+            $statsQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $statsQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request->filled('reason')) {
+            $statsQuery->where('reason', $request->reason);
+        }
+        if ($request->filled('refund_method')) {
+            $statsQuery->where('refund_method', $request->refund_method);
+        }
+        if ($request->filled('status') && $request->status !== 'all') {
+            $statsQuery->where('status', $request->status);
+        }
 
-        $totalCount = $returns->total();
+        $totalReturns  = $statsQuery->count();
+        $totalRefunded = (clone $statsQuery)->where('status', 'completed')->sum('total_refunded');
+        
+        // Sum of returned items
+        $matchingReturnIds = (clone $statsQuery)->pluck('id');
+        $itemsReturned = ReturnItem::whereIn('return_id', $matchingReturnIds)->sum('qty');
 
-        return view('returns.index', compact('returns', 'totalRefunded', 'totalCount'));
+        // Total sales in the same period to calculate Return Rate
+        $salesQuery = Sale::query();
+        if ($request->filled('date_from')) {
+            $salesQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $salesQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+        $totalSalesCount = $salesQuery->count();
+        $returnRate = $totalSalesCount > 0 ? round(($totalReturns / $totalSalesCount) * 100, 1) : 0.0;
+
+        $totalAllReturns = ProductReturn::count();
+
+        return view('returns.index', compact(
+            'returns',
+            'totalReturns',
+            'totalRefunded',
+            'itemsReturned',
+            'returnRate',
+            'totalAllReturns'
+        ));
     }
 
     /**

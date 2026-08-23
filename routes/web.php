@@ -158,7 +158,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::delete('/products/{product}/variants/{variant}', [ProductController::class, 'destroyVariant'])->name('products.variants.destroy');
 
 
-    // Sales History
+    // Sales History (accessible via /sales and /orders)
+    Route::get('/orders', fn() => redirect()->route('sales.index'))->middleware('permission:sales');
     Route::get('/sales', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\Sale::with(['items.product', 'items.variant', 'user', 'customer', 'smsOutbox', 'returns.items'])->latest();
 
@@ -181,11 +182,31 @@ Route::middleware(['auth', 'active'])->group(function () {
         if ($request->filled('payment_method')) {
             $query->where('payment_method', $request->payment_method);
         }
+        // Staff filter
+        if ($request->filled('staff_id')) {
+            $query->where('user_id', $request->staff_id);
+        }
+        // Status filter
+        if ($request->filled('status')) {
+            $st = strtolower($request->status);
+            if ($st === 'paid') {
+                $query->where('has_return', false);
+            } elseif (in_array($st, ['refunded', 'partially_refunded', 'void'])) {
+                $query->where('has_return', true);
+            }
+        }
 
         $sales = $query->paginate(15)->withQueryString();
 
         // Summary stats (for the filtered date range)
         $statsQuery = \App\Models\Sale::query();
+        if ($request->filled('invoice')) {
+            $invoiceInput = trim($request->invoice);
+            $statsQuery->where(function ($q) use ($invoiceInput) {
+                $q->where('invoice_number', 'like', '%' . $invoiceInput . '%')
+                  ->orWhere('id', is_numeric($invoiceInput) ? (int) $invoiceInput : 0);
+            });
+        }
         if ($request->filled('date_from')) {
             $statsQuery->whereDate('created_at', '>=', $request->date_from);
         }
@@ -195,18 +216,31 @@ Route::middleware(['auth', 'active'])->group(function () {
         if ($request->filled('payment_method')) {
             $statsQuery->where('payment_method', $request->payment_method);
         }
+        if ($request->filled('staff_id')) {
+            $statsQuery->where('user_id', $request->staff_id);
+        }
+        if ($request->filled('status')) {
+            $st = strtolower($request->status);
+            if ($st === 'paid') {
+                $statsQuery->where('has_return', false);
+            } elseif (in_array($st, ['refunded', 'partially_refunded', 'void'])) {
+                $statsQuery->where('has_return', true);
+            }
+        }
 
-    $totalSales   = $statsQuery->count();
-    $totalRevenue = $statsQuery->sum('total');
-    // Subtract returns for net revenue
-    $returnQuery = \App\Models\ProductReturn::where('status', 'completed');
-    if ($request->filled('date_from')) $returnQuery->whereDate('created_at', '>=', $request->date_from);
-    if ($request->filled('date_to'))   $returnQuery->whereDate('created_at', '<=', $request->date_to);
-    $totalRefunded = $returnQuery->sum('total_refunded');
-    $netRevenue = max(0, $totalRevenue - $totalRefunded);
-    $avgSale = $totalSales > 0 ? $netRevenue / $totalSales : 0;
+        $totalSales   = $statsQuery->count();
+        $totalRevenue = $statsQuery->sum('total');
+        // Subtract returns for net revenue
+        $returnQuery = \App\Models\ProductReturn::where('status', 'completed');
+        if ($request->filled('date_from')) $returnQuery->whereDate('created_at', '>=', $request->date_from);
+        if ($request->filled('date_to'))   $returnQuery->whereDate('created_at', '<=', $request->date_to);
+        $totalRefunded = $returnQuery->sum('total_refunded');
+        $totalRefundedCount = $returnQuery->count();
+        $netRevenue = max(0, $totalRevenue - $totalRefunded);
+        $avgSale = $totalSales > 0 ? $netRevenue / $totalSales : 0;
+        $staffList = \App\Models\User::orderBy('name')->get(['id', 'name']);
 
-    return view('sales.index', compact('sales', 'totalSales', 'totalRevenue', 'avgSale', 'totalRefunded', 'netRevenue'));
+        return view('sales.index', compact('sales', 'totalSales', 'totalRevenue', 'avgSale', 'totalRefunded', 'totalRefundedCount', 'netRevenue', 'staffList'));
     })->middleware('permission:sales')->name('sales.index');
 
     // Returns & Refunds

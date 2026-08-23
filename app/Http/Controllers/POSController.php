@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collection;
+use App\Models\Customer;
 use App\Models\GiftCard;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -141,9 +142,14 @@ class POSController extends Controller
                 ->first();
         }
 
+        $initialCustomer = null;
+        if (request()->filled('customer_id')) {
+            $initialCustomer = Customer::find(request('customer_id'));
+        }
+
         $nextBillNo = (Sale::max('id') ?? 0) + 1;
 
-        return view('pos.index', compact('products', 'collections', 'localCategories', 'needsCategorySync', 'pendingGiftCard', 'nextBillNo'));
+        return view('pos.index', compact('products', 'collections', 'localCategories', 'needsCategorySync', 'pendingGiftCard', 'initialCustomer', 'nextBillNo'));
     }
 
     public function search(Request $request): JsonResponse

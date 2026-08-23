@@ -213,6 +213,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/sales', function (\Illuminate\Http\Request $request) {
         $query = \App\Models\Sale::with(['items.product', 'items.variant', 'user', 'customer', 'smsOutbox', 'returns.items'])->latest();
 
+        // Customer filter
+        if ($request->filled('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
         // Invoice number filter — search by invoice_number or fallback to ID
         if ($request->filled('invoice')) {
             $invoiceInput = trim($request->invoice);
@@ -250,6 +255,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Summary stats (for the filtered date range)
         $statsQuery = \App\Models\Sale::query();
+        if ($request->filled('customer_id')) {
+            $statsQuery->where('customer_id', $request->customer_id);
+        }
         if ($request->filled('invoice')) {
             $invoiceInput = trim($request->invoice);
             $statsQuery->where(function ($q) use ($invoiceInput) {
@@ -282,6 +290,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         $totalRevenue = $statsQuery->sum('total');
         // Subtract returns for net revenue
         $returnQuery = \App\Models\ProductReturn::where('status', 'completed');
+        if ($request->filled('customer_id')) {
+            $returnQuery->whereHas('sale', fn($sq) => $sq->where('customer_id', $request->customer_id));
+        }
         if ($request->filled('date_from')) $returnQuery->whereDate('created_at', '>=', $request->date_from);
         if ($request->filled('date_to'))   $returnQuery->whereDate('created_at', '<=', $request->date_to);
         $totalRefunded = $returnQuery->sum('total_refunded');

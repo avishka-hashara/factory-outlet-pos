@@ -2732,6 +2732,11 @@ Matches DESIGN.md + Stitch Terminal Mockup
         showToast(@json('Gift card ' . $pendingGiftCard->card_number . ' is in the cart — it becomes SOLD when checkout completes.'), 'info');
     @endif
 
+    @if(!empty($initialCustomer))
+        selectCustomer({{ $initialCustomer->id }}, @json($initialCustomer->name ?: $initialCustomer->phone));
+        showToast(@json('Customer ' . ($initialCustomer->name ?: $initialCustomer->phone) . ' selected for this sale.'), 'info');
+    @endif
+
     // Initial setup
     updateHeldOrdersBadge();
     filterProducts();

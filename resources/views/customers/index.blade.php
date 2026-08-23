@@ -121,7 +121,9 @@
             'is_lapsed' => $isLapsed,
             'created_at_formatted' => $c->created_at->format('M d, Y'),
             'whatsapp_url' => $whatsappUrl,
-            'history_url' => route('sales.index', ['search' => $c->phone ?: $c->name]),
+            'history_url' => route('sales.index', ['customer_id' => $c->id]),
+            'show_url' => route('customers.show', $c->id),
+            'new_sale_url' => route('pos.index', ['customer_id' => $c->id]),
             'delete_url' => route('customers.destroy', $c->id),
             'recent_sales' => $recentSales,
         ];

@@ -1,781 +1,1166 @@
 {{-- ============================================
-     Reports Page - Jewellery POS System
-     Daily/Monthly/Custom tabs, charts, export
+     Reports & Analytics - Redesigned Dark Dashboard Experience
+     Sales, Stock, Category & Staff Performance
      ============================================ --}}
 @extends('layouts.pos')
-@section('title', 'Reports')
+@section('title', 'Reports & Analytics')
+
+@push('styles')
+<style>
+    :root {
+        --dash-card-bg: #171A20;
+        --dash-card-hover-bg: #1E222A;
+        --dash-card-border: #272C35;
+        --dash-card-border-width: 1px;
+        --dash-card-radius: 8px;
+        --dash-control-radius: 6px;
+    }
+
+    .dashboard-card {
+        background-color: var(--dash-card-bg) !important;
+        border: var(--dash-card-border-width) solid var(--dash-card-border) !important;
+        border-radius: var(--dash-card-radius) !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .dashboard-control {
+        background-color: #111419 !important;
+        border: var(--dash-card-border-width) solid var(--dash-card-border) !important;
+        border-radius: var(--dash-control-radius) !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        outline: none !important;
+        color: #F5F5F5 !important;
+    }
+
+    .dashboard-control:hover {
+        background-color: var(--dash-card-hover-bg) !important;
+    }
+
+    .dashboard-control:focus {
+        border-color: #F5A623 !important;
+        box-shadow: 0 0 0 1px #F5A623 !important;
+    }
+
+    /* Dark native date picker indicator */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(0.8) sepia(100%) saturate(100%) hue-rotate(0deg);
+        cursor: pointer;
+        opacity: 0.7;
+    }
+
+    /* Custom dark scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #111419;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #272C35;
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #3E444D;
+    }
+</style>
+@endpush
+
+@section('main-class', 'p-3.5 lg:p-4 pb-8 overflow-y-auto custom-scrollbar')
+
+@php
+    $currentTab = $tab ?? 'daily';
+    
+    // Period label for chip
+    $periodLabel = match($currentTab) {
+        'daily'   => \Carbon\Carbon::parse($date)->isToday() ? ('Today · ' . \Carbon\Carbon::parse($date)->format('M d, Y')) : \Carbon\Carbon::parse($date)->format('M d, Y'),
+        'monthly' => \Carbon\Carbon::parse($month . '-01')->format('F Y'),
+        'custom'  => \Carbon\Carbon::parse($dateFrom)->format('M d') . ' → ' . \Carbon\Carbon::parse($dateTo)->format('M d, Y'),
+        'stock'   => 'Live Inventory Snapshot',
+        default   => 'Analytics'
+    };
+
+    // Active KPI metrics based on current tab
+    $activeMetrics = match($currentTab) {
+        'monthly' => [
+            'sales' => $monthlyTotalSales,
+            'revenue' => $monthlyRevenue,
+            'items' => $monthlyItemsSold,
+            'refunds' => $monthlyTotalRefunds,
+            'refund_val' => $monthlyRefundValue,
+            'avg_sale' => $monthlyAvgSale,
+            'deltas' => $monthlyDeltas,
+            'comp_label' => 'vs last month',
+            'payments' => $monthlyPayments,
+            'top_products' => $monthlyTopProducts,
+            'staff_sales' => $monthlyStaffSales,
+            'category_sales' => $monthlyCategorySales,
+            'date_from' => \Carbon\Carbon::parse($month . '-01')->startOfMonth()->toDateString(),
+            'date_to' => \Carbon\Carbon::parse($month . '-01')->endOfMonth()->toDateString(),
+        ],
+        'custom' => [
+            'sales' => $customTotalSales,
+            'revenue' => $customRevenue,
+            'items' => $customItemsSold,
+            'refunds' => $customTotalRefunds,
+            'refund_val' => $customRefundValue,
+            'avg_sale' => $customAvgSale,
+            'deltas' => $customDeltas,
+            'comp_label' => 'vs prev period',
+            'payments' => $customPayments,
+            'top_products' => $customTopProducts,
+            'staff_sales' => $customStaffSales,
+            'category_sales' => $customCategorySales,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ],
+        default => [ // daily
+            'sales' => $totalSales,
+            'revenue' => $revenue,
+            'items' => $itemsSold,
+            'refunds' => $totalRefunds,
+            'refund_val' => $refundValue,
+            'avg_sale' => $avgSale,
+            'deltas' => $dailyDeltas,
+            'comp_label' => 'vs yesterday',
+            'payments' => $payments,
+            'top_products' => $topProducts,
+            'staff_sales' => $dailyStaffSales,
+            'category_sales' => $dailyCategorySales,
+            'date_from' => $date,
+            'date_to' => $date,
+        ],
+    };
+
+    // Total non-zero payment count
+    $nonZeroPayments = collect($activeMetrics['payments'])->filter(fn($amount) => abs($amount) > 0.01);
+    $totalPaymentRevenue = $nonZeroPayments->sum(fn($v) => max(0, $v));
+
+    // Colors mapping for payment methods
+    $paymentColors = [
+        'cash'         => '#10B981', // Emerald
+        'card'         => '#3B82F6', // Blue
+        'koko'         => '#8B5CF6', // Purple
+        'payzy'        => '#F5A623', // Amber
+        'mintpay'      => '#EC4899', // Rose
+        'bank'         => '#06B6D4', // Cyan
+        'store_credit' => '#EAB308', // Gold
+        'multipay'     => '#A855F7',
+    ];
+@endphp
 
 @section('content')
-<!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center flex-wrap">
-    <div>
-        <h4><i class="fas fa-chart-bar me-2 text-gold"></i> Reports</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active">Reports</li>
-            </ol>
-        </nav>
-    </div>
-    <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0 report-header-actions">
-        <button class="btn btn-gold btn-sm" onclick="syncShopify()" id="sync-btn">
-            <i class="fas fa-sync-alt me-1"></i><span class="d-none d-sm-inline"> Sync Shopify</span>
-        </button>
-        <button class="btn btn-outline-gold btn-sm" onclick="exportPDF()">
-            <i class="fas fa-file-pdf me-1"></i><span class="d-none d-sm-inline"> Export PDF</span>
-        </button>
-        <button class="btn btn-outline-gold btn-sm" onclick="exportExcel()">
-            <i class="fas fa-file-excel me-1"></i><span class="d-none d-sm-inline"> Export Excel</span>
-        </button>
-    </div>
-</div>
+<div class="w-full flex flex-col select-none gap-3.5 box-border"
+     x-data="reportsApp({
+        tab: '{{ $currentTab }}',
+        date: '{{ $date }}',
+        month: '{{ $month }}',
+        dateFrom: '{{ $dateFrom }}',
+        dateTo: '{{ $dateTo }}',
+     })">
 
-@if(session('pdf_error'))
-<div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-    <i class="fas fa-exclamation-circle me-2"></i>{{ session('pdf_error') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-@endif
+    <!-- ========================================================
+         1. PAGE HEADER
+         ======================================================== -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+        <!-- Title & Subtitle -->
+        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <h1 class="font-headline-lg text-[20px] lg:text-[22px] text-on-surface m-0 font-bold tracking-tight">
+                    Reports
+                </h1>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-accent border border-amber-500/25">
+                    <span class="material-symbols-outlined text-[13px] text-amber-accent">insights</span>
+                    Analytics
+                </span>
+                <span class="px-2 py-0.5 rounded bg-surface-variant/40 border border-[#272C35] text-[11px] font-medium text-[#d7c3ae]">
+                    {{ $periodLabel }}
+                </span>
+            </div>
+            <p class="font-body-sm text-[12px] text-on-surface-variant m-0">
+                Sales, stock and performance
+            </p>
+        </div>
 
-<!-- Report Tabs -->
-<ul class="nav nav-pills mb-4 report-tabs flex-nowrap overflow-auto" id="reportTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active text-nowrap" data-bs-toggle="pill" data-bs-target="#daily" type="button">
-            <i class="fas fa-calendar-day me-1"></i> Daily
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link text-nowrap" data-bs-toggle="pill" data-bs-target="#monthly" type="button">
-            <i class="fas fa-calendar-alt me-1"></i> Monthly
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link text-nowrap" data-bs-toggle="pill" data-bs-target="#custom" type="button">
-            <i class="fas fa-sliders-h me-1"></i> Custom Range
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link text-nowrap {{ $tab === 'stock' ? 'active' : '' }}" data-bs-toggle="pill" data-bs-target="#stock" type="button">
-            <i class="fas fa-boxes me-1"></i> Stock
-        </button>
-    </li>
-</ul>
+        <!-- Right Side Actions: Solid Amber Export + Overflow ⋯ -->
+        <div class="flex items-center gap-2">
+            <!-- Export Primary Dropdown Button -->
+            <div class="relative" x-data="{ exportOpen: false }">
+                <button type="button"
+                        @click="exportOpen = !exportOpen"
+                        class="h-[34px] px-3.5 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-0 active:scale-95 shadow-md">
+                    <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'wght' 700;">download</span>
+                    <span>Export</span>
+                    <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                </button>
 
-<div class="tab-content" id="reportTabContent">
-    <!-- ---- Daily Report Tab ---- -->
-    <div class="tab-pane fade show active" id="daily" role="tabpanel">
-        <!-- Date Selector -->
-        <div class="pos-card card mb-4">
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-8 col-md-4">
-                        <label class="form-label small fw-semibold">Select Date</label>
-                        <input type="date" name="date" class="form-control" value="{{ $date }}">
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <form method="GET" action="{{ route('reports.index') }}">
-                            <button type="submit" class="btn btn-dark-blue w-100"><i class="fas fa-search me-1"></i> Generate</button>
-                        </form>
-                    </div>
+                <div x-show="exportOpen"
+                     @click.outside="exportOpen = false"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     class="absolute right-0 top-full mt-1.5 w-44 rounded-[6px] bg-[#13151A] border border-white/10 shadow-2xl py-1 z-50 text-[11px]"
+                     style="display: none;">
+                    <a :href="'{{ route('reports.exportPdf') }}' + buildExportQuery()"
+                       target="_blank"
+                       class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left no-underline cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px] text-rose-400">picture_as_pdf</span>
+                        <span>Export PDF</span>
+                    </a>
+                    <a :href="'{{ route('reports.exportExcel') }}' + buildExportQuery()"
+                       class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left no-underline cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px] text-emerald-400">table_view</span>
+                        <span>Export Excel (CSV)</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Overflow ⋯ Header Menu -->
+            <div class="relative" x-data="{ headerMenuOpen: false }">
+                <button type="button"
+                        @click="headerMenuOpen = !headerMenuOpen"
+                        class="dashboard-control h-[34px] w-[34px] rounded-[6px] flex items-center justify-center text-[#8A8A93] hover:text-white cursor-pointer"
+                        title="More Actions">
+                    <span class="material-symbols-outlined text-[18px]">more_horiz</span>
+                </button>
+
+                <div x-show="headerMenuOpen"
+                     @click.outside="headerMenuOpen = false"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     class="absolute right-0 top-full mt-1.5 w-44 rounded-[6px] bg-[#13151A] border border-white/10 shadow-2xl py-1 z-50 text-[11px]"
+                     style="display: none;">
+                    <button type="button"
+                            @click="headerMenuOpen = false; syncShopify()"
+                            class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px] text-amber-accent">cloud_sync</span>
+                        <span>Sync with Shopify</span>
+                    </button>
+                    <button type="button"
+                            @click="headerMenuOpen = false; window.print()"
+                            class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">print</span>
+                        <span>Print Report</span>
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-4">
-                <div class="stat-card gold p-3">
-                    <div class="stat-label">Total Sales</div>
-                    <div class="stat-value">{{ $totalSales }}</div>
-                </div>
+    <!-- Error Alert -->
+    @if(session('pdf_error'))
+        <div class="p-3 rounded-[6px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[12px] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">error</span>
+                <span>{{ session('pdf_error') }}</span>
             </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card blue p-3">
-                    <div class="stat-label">Revenue</div>
-                    <div class="stat-value">Rs. {{ number_format($revenue, 2) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card green p-3">
-                    <div class="stat-label">Items Sold</div>
-                    <div class="stat-value">{{ $itemsSold }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card warning p-3">
-                    <div class="stat-label">Total Refunds</div>
-                    <div class="stat-value">{{ $totalRefunds }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card red p-3">
-                    <div class="stat-label">Refund Value</div>
-                    <div class="stat-value">Rs. {{ number_format($refundValue, 2) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card warning p-3">
-                    <div class="stat-label">Avg. Sale</div>
-                    <div class="stat-value">Rs. {{ number_format($avgSale, 2) }}</div>
-                </div>
-            </div>
+            <button type="button" @click="$el.parentElement.remove()" class="text-rose-400 hover:text-white bg-transparent border-0 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">close</span>
+            </button>
+        </div>
+    @endif
+
+    <!-- ========================================================
+         2. TABS & DYNAMIC FILTER BAR
+         ======================================================== -->
+    <div class="dashboard-card rounded-[8px] p-2.5 lg:p-3 bg-[#171A20] border border-[#272C35] flex flex-col gap-2.5">
+        <!-- Muted Pill Tabs (Daily / Monthly / Custom Range / Stock) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar select-none">
+            <a href="{{ route('reports.index', ['tab' => 'daily', 'date' => $date]) }}"
+               class="px-3 py-1.5 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ $currentTab === 'daily' ? 'bg-[#1E222A] text-amber-accent border-amber-accent/40 font-bold shadow-xs' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span class="material-symbols-outlined text-[15px]">calendar_today</span>
+                <span>Daily Report</span>
+            </a>
+
+            <a href="{{ route('reports.index', ['tab' => 'monthly', 'month' => $month]) }}"
+               class="px-3 py-1.5 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ $currentTab === 'monthly' ? 'bg-[#1E222A] text-amber-accent border-amber-accent/40 font-bold shadow-xs' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span class="material-symbols-outlined text-[15px]">calendar_month</span>
+                <span>Monthly Report</span>
+            </a>
+
+            <a href="{{ route('reports.index', ['tab' => 'custom', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}"
+               class="px-3 py-1.5 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ $currentTab === 'custom' ? 'bg-[#1E222A] text-amber-accent border-amber-accent/40 font-bold shadow-xs' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span class="material-symbols-outlined text-[15px]">date_range</span>
+                <span>Custom Range</span>
+            </a>
+
+            <a href="{{ route('reports.index', ['tab' => 'stock']) }}"
+               class="px-3 py-1.5 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ $currentTab === 'stock' ? 'bg-[#1E222A] text-amber-accent border-amber-accent/40 font-bold shadow-xs' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span class="material-symbols-outlined text-[15px]">inventory_2</span>
+                <span>Stock Report</span>
+                <span class="px-1.5 py-0.2 rounded bg-black/40 text-[10px] tabular-nums text-amber-accent">{{ $stockProductCount }}</span>
+            </a>
         </div>
 
-        <!-- Charts Row -->
-        <div class="row g-4 mb-4">
-            <div class="col-lg-8 col-12">
-                <div class="pos-card card">
-                    <div class="card-body">
-                        <h5 class="mb-3"><i class="fas fa-chart-line me-2 text-gold"></i> Hourly Sales Trend</h5>
-                        <canvas id="dailyHourlyChart" height="120" style="max-height:280px;"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 col-12">
-                <div class="pos-card card">
-                    <div class="card-body">
-                        <h5 class="mb-3"><i class="fas fa-chart-pie me-2 text-gold"></i> Payment Breakdown</h5>
-                        <canvas id="dailyPaymentChart" height="200" style="max-height:250px;"></canvas>
-                        <!-- Payment Summary -->
-                        <div class="mt-3">
-                            @foreach($payments as $method => $amount)
-                                @if(abs($amount) > 0.01)
-                                <div class="d-flex justify-content-between py-2 border-bottom">
-                                    <span class="text-capitalize">
-                                        <i class="fas fa-circle me-2" style="font-size:0.5rem; color: 
-                                            {{ $method == 'cash' ? '#10B981' : 
-                                               ($method == 'koko' ? '#3B82F6' : 
-                                               ($method == 'mintpay' ? '#F5A623' : '#F59E0B')) }}">
-                                        </i> {{ $method }}
-                                    </span>
-                                    <strong>{{ $amount < 0 ? '-Rs. ' : 'Rs. ' }}{{ number_format(abs($amount), 2) }}</strong>
-                                </div>
-                                @endif
-                            @endforeach
+        <!-- Filter Form Adapting to Active Tab -->
+        @if($currentTab !== 'stock')
+            <form method="GET" action="{{ route('reports.index') }}" class="w-full pt-1 border-t border-[#272C35]/50">
+                <input type="hidden" name="tab" value="{{ $currentTab }}">
+
+                <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+                    @if($currentTab === 'daily')
+                        <!-- Daily Date Picker -->
+                        <div class="flex-1 sm:max-w-xs relative">
+                            <input type="date"
+                                   name="date"
+                                   value="{{ $date }}"
+                                   aria-label="Select Date"
+                                   class="dashboard-control w-full h-[34px] px-3 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] [color-scheme:dark]">
                         </div>
+                    @elseif($currentTab === 'monthly')
+                        <!-- Month Picker -->
+                        <div class="flex-1 sm:max-w-xs relative">
+                            <select name="month"
+                                    aria-label="Select Month"
+                                    class="dashboard-control w-full h-[34px] px-3 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] cursor-pointer">
+                                @foreach($availableMonths as $availMonth)
+                                    <option value="{{ $availMonth }}" {{ $availMonth === $month ? 'selected' : '' }}>
+                                        {{ \Carbon\Carbon::parse($availMonth . '-01')->format('F Y') }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @elseif($currentTab === 'custom')
+                        <!-- Custom Date Range -->
+                        <div class="flex items-center gap-1.5">
+                            <div class="relative flex-1 sm:w-[140px]">
+                                <input type="date"
+                                       name="date_from"
+                                       id="customDateFrom"
+                                       value="{{ $dateFrom }}"
+                                       aria-label="From Date"
+                                       class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] [color-scheme:dark]">
+                            </div>
+                            <span class="text-on-surface-variant text-[11px] font-semibold">→</span>
+                            <div class="relative flex-1 sm:w-[140px]">
+                                <input type="date"
+                                       name="date_to"
+                                       id="customDateTo"
+                                       value="{{ $dateTo }}"
+                                       aria-label="To Date"
+                                       class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] [color-scheme:dark]">
+                            </div>
+                        </div>
+
+                        <!-- Quick Presets -->
+                        <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar py-0.5">
+                            <button type="button" @click="applyPreset('today')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Today</button>
+                            <button type="button" @click="applyPreset('yesterday')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Yesterday</button>
+                            <button type="button" @click="applyPreset('last7')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Last 7d</button>
+                            <button type="button" @click="applyPreset('last30')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Last 30d</button>
+                            <button type="button" @click="applyPreset('this_month')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">This Month</button>
+                            <button type="button" @click="applyPreset('last_month')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Last Month</button>
+                        </div>
+                    @endif
+
+                    <!-- Generate Button -->
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="submit"
+                                class="h-[34px] px-4 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-0 active:scale-95 shadow-md">
+                            <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'wght' 700;">query_stats</span>
+                            <span>Generate Report</span>
+                        </button>
                     </div>
+                </div>
+            </form>
+        @else
+            <!-- Stock Tab Filters -->
+            <div class="w-full pt-1 border-t border-[#272C35]/50 flex flex-col sm:flex-row items-center gap-2">
+                <div class="relative flex-1 w-full">
+                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[#8A8A93]">search</span>
+                    <input type="text" id="stockSearch" placeholder="Filter product name or SKU..." oninput="filterStockTable()"
+                           class="dashboard-control w-full h-[34px] pl-8 pr-3 text-[11px] text-white placeholder-[#8A8A93] bg-[#111419] rounded-[6px]">
+                </div>
+                <div class="w-full sm:w-[150px]">
+                    <select id="stockCategoryFilter" onchange="filterStockTable()"
+                            class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] cursor-pointer">
+                        <option value="">All Categories</option>
+                        @foreach($stockProducts->pluck('category')->filter()->unique()->sort() as $cat)
+                            <option value="{{ $cat }}">{{ $cat }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="w-full sm:w-[140px]">
+                    <select id="stockStatusFilter" onchange="filterStockTable()"
+                            class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] cursor-pointer">
+                        <option value="">All Statuses</option>
+                        <option value="in">In Stock</option>
+                        <option value="low">Low Stock (≤5)</option>
+                        <option value="out">Out of Stock</option>
+                    </select>
+                </div>
+            </div>
+        @endif
+    </div>
+
+    @if($currentTab !== 'stock')
+        <!-- ========================================================
+             3. KPI ROW (6 STAT CARDS)
+             ======================================================== -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 shrink-0">
+            <!-- 1. Total Sales -->
+            <a href="{{ route('sales.index', ['date_from' => $activeMetrics['date_from'], 'date_to' => $activeMetrics['date_to']]) }}"
+               class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 no-underline cursor-pointer border-l-2 border-l-[#F5A623]">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-amber-accent uppercase tracking-[0.08em] truncate">Total Sales</span>
+                        <span class="material-symbols-outlined text-[16px] text-amber-accent shrink-0">receipt_long</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-white tracking-tight tabular-nums">
+                        {{ number_format($activeMetrics['sales']) }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-1.5">
+                    @php $d = $activeMetrics['deltas']['sales']; @endphp
+                    @if($d !== null)
+                        <span class="px-1 py-0.2 rounded font-bold {{ $d >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400' }}">
+                            {{ $d >= 0 ? '↑' : '↓' }} {{ abs($d) }}%
+                        </span>
+                    @endif
+                    <span class="truncate">{{ $activeMetrics['comp_label'] }}</span>
+                </div>
+            </a>
+
+            <!-- 2. Revenue -->
+            <a href="{{ route('sales.index', ['date_from' => $activeMetrics['date_from'], 'date_to' => $activeMetrics['date_to']]) }}"
+               class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 no-underline cursor-pointer border-l-2 border-l-emerald-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.08em] truncate">Net Revenue</span>
+                        <span class="material-symbols-outlined text-[16px] text-emerald-400 shrink-0">payments</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-emerald-400 tracking-tight tabular-nums">
+                        Rs. {{ number_format($activeMetrics['revenue'], 0) }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-1.5">
+                    @php $d = $activeMetrics['deltas']['revenue']; @endphp
+                    @if($d !== null)
+                        <span class="px-1 py-0.2 rounded font-bold {{ $d >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400' }}">
+                            {{ $d >= 0 ? '↑' : '↓' }} {{ abs($d) }}%
+                        </span>
+                    @endif
+                    <span class="truncate">{{ $activeMetrics['comp_label'] }}</span>
+                </div>
+            </a>
+
+            <!-- 3. Items Sold -->
+            <div class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 border-l-2 border-l-sky-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.08em] truncate">Items Sold</span>
+                        <span class="material-symbols-outlined text-[16px] text-sky-400 shrink-0">shopping_bag</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-white tracking-tight tabular-nums">
+                        {{ number_format($activeMetrics['items']) }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-1.5">
+                    @php $d = $activeMetrics['deltas']['items']; @endphp
+                    @if($d !== null)
+                        <span class="px-1 py-0.2 rounded font-bold {{ $d >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400' }}">
+                            {{ $d >= 0 ? '↑' : '↓' }} {{ abs($d) }}%
+                        </span>
+                    @endif
+                    <span class="truncate">{{ $activeMetrics['comp_label'] }}</span>
+                </div>
+            </div>
+
+            <!-- 4. Total Refunds -->
+            <a href="{{ route('returns.index', ['date_from' => $activeMetrics['date_from'], 'date_to' => $activeMetrics['date_to']]) }}"
+               class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 no-underline cursor-pointer border-l-2 border-l-amber-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-[0.08em] truncate">Total Refunds</span>
+                        <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">assignment_return</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-white tracking-tight tabular-nums">
+                        {{ number_format($activeMetrics['refunds']) }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-1.5">
+                    @php $d = $activeMetrics['deltas']['refunds']; @endphp
+                    @if($d !== null)
+                        <span class="px-1 py-0.2 rounded font-bold {{ $d <= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400' }}">
+                            {{ $d <= 0 ? '↓' : '↑' }} {{ abs($d) }}%
+                        </span>
+                    @endif
+                    <span class="truncate">{{ $activeMetrics['comp_label'] }}</span>
+                </div>
+            </a>
+
+            <!-- 5. Refund Value -->
+            <a href="{{ route('returns.index', ['date_from' => $activeMetrics['date_from'], 'date_to' => $activeMetrics['date_to']]) }}"
+               class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 no-underline cursor-pointer border-l-2 border-l-rose-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-rose-400 uppercase tracking-[0.08em] truncate">Refund Value</span>
+                        <span class="material-symbols-outlined text-[16px] text-rose-400 shrink-0">keyboard_return</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-rose-400 tracking-tight tabular-nums">
+                        Rs. {{ number_format($activeMetrics['refund_val'], 0) }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-1.5">
+                    @php $d = $activeMetrics['deltas']['refund_val']; @endphp
+                    @if($d !== null)
+                        <span class="px-1 py-0.2 rounded font-bold {{ $d <= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400' }}">
+                            {{ $d <= 0 ? '↓' : '↑' }} {{ abs($d) }}%
+                        </span>
+                    @endif
+                    <span class="truncate">{{ $activeMetrics['comp_label'] }}</span>
+                </div>
+            </a>
+
+            <!-- 6. Average Sale -->
+            <div class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 border-l-2 border-l-purple-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-purple-400 uppercase tracking-[0.08em] truncate">Average Sale</span>
+                        <span class="material-symbols-outlined text-[16px] text-purple-400 shrink-0">analytics</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-white tracking-tight tabular-nums">
+                        Rs. {{ number_format($activeMetrics['avg_sale'], 0) }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-1.5">
+                    @php $d = $activeMetrics['deltas']['avg_sale']; @endphp
+                    @if($d !== null)
+                        <span class="px-1 py-0.2 rounded font-bold {{ $d >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400' }}">
+                            {{ $d >= 0 ? '↑' : '↓' }} {{ abs($d) }}%
+                        </span>
+                    @endif
+                    <span class="truncate">{{ $activeMetrics['comp_label'] }}</span>
                 </div>
             </div>
         </div>
 
-        <!-- Top Products Table -->
-        <div class="pos-card card">
-            <div class="card-body">
-                <h5 class="mb-3"><i class="fas fa-trophy me-2 text-gold"></i> Top Selling Products Today</h5>
-                <div class="table-responsive">
-                    <table class="table pos-table mb-0">
+        <!-- ========================================================
+             4. CHARTS ROW (TREND CHART + PAYMENT BREAKDOWN)
+             ======================================================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+            <!-- 1. Trend Chart (Hourly or Daily) -->
+            <div class="lg:col-span-2 dashboard-card rounded-[8px] p-4 bg-[#171A20] border border-[#272C35] flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-amber-accent">show_chart</span>
+                        <h4 class="m-0 text-[13px] font-bold text-white tracking-tight">
+                            {{ $currentTab === 'daily' ? 'Hourly Sales Trend' : ($currentTab === 'monthly' ? 'Daily Sales in ' . \Carbon\Carbon::parse($month . '-01')->format('F Y') : 'Daily Revenue Trend') }}
+                        </h4>
+                    </div>
+                    <div class="flex items-center gap-3 text-[10px] text-[#8A8A93]">
+                        <span class="flex items-center gap-1">
+                            <span class="w-2.5 h-2.5 rounded-xs bg-[#F5A623]"></span> Current Period
+                        </span>
+                        @if($currentTab === 'daily')
+                            <span class="flex items-center gap-1">
+                                <span class="w-2.5 h-0.5 border-b border-dashed border-white/40"></span> Yesterday
+                            </span>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="relative w-full h-[220px]">
+                    <canvas id="salesTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 2. Payment Breakdown Donut Card -->
+            <div class="dashboard-card rounded-[8px] p-4 bg-[#171A20] border border-[#272C35] flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-amber-accent">donut_small</span>
+                        <h4 class="m-0 text-[13px] font-bold text-white tracking-tight">Payment Methods</h4>
+                    </div>
+                    <span class="text-[11px] text-[#8A8A93] font-bold tabular-nums">
+                        Rs. {{ number_format($totalPaymentRevenue, 0) }}
+                    </span>
+                </div>
+
+                @if($nonZeroPayments->count() > 1)
+                    <!-- Donut Chart Canvas -->
+                    <div class="relative w-full h-[150px] flex items-center justify-center my-1">
+                        <canvas id="paymentDonutChart"></canvas>
+                    </div>
+                @endif
+
+                <!-- Payment Methods Breakdown List -->
+                <div class="flex flex-col gap-1.5 mt-2">
+                    @forelse($nonZeroPayments as $method => $amount)
+                        @php
+                            $pct = $totalPaymentRevenue > 0 ? round(($amount / $totalPaymentRevenue) * 100, 1) : 0;
+                            $col = $paymentColors[$method] ?? '#64748B';
+                        @endphp
+                        <div class="flex flex-col gap-0.5 text-[11px]">
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-1.5 text-white capitalize font-medium">
+                                    <span class="w-2 h-2 rounded-full" style="background-color: {{ $col }};"></span>
+                                    <span>{{ str_replace('_', ' ', $method) }}</span>
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-[#d7c3ae] font-bold tabular-nums">Rs. {{ number_format($amount, 2) }}</span>
+                                    <span class="text-[10px] text-[#8A8A93] tabular-nums font-bold w-10 text-right">{{ $pct }}%</span>
+                                </div>
+                            </div>
+                            <div class="w-full h-1 bg-[#111419] rounded-full overflow-hidden border border-[#272C35]">
+                                <div class="h-full rounded-full transition-all duration-300"
+                                     style="width: {{ $pct }}%; background-color: {{ $col }};"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="py-8 text-center text-[#8A8A93] text-[11px]">
+                            No payments recorded for this period.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             5. ANALYTICS ROW: TOP PRODUCTS + SALES BY STAFF + CATEGORIES
+             ======================================================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+            <!-- 1. Top Selling Products (Top 10) -->
+            <div class="dashboard-card rounded-[8px] overflow-hidden bg-[#171A20] border border-[#272C35] flex flex-col">
+                <div class="p-3 border-b border-[#272C35] flex items-center justify-between bg-[#111419]/60">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-amber-accent">leaderboard</span>
+                        <h4 class="m-0 text-[12px] font-bold text-white">Top Selling Products</h4>
+                    </div>
+                    <a href="{{ route('products.index') }}" class="text-[10px] text-amber-accent hover:underline font-semibold no-underline">
+                        View Catalog &rarr;
+                    </a>
+                </div>
+
+                <div class="p-0 overflow-x-auto custom-scrollbar flex-1">
+                    <table class="w-full text-left text-[11px]">
                         <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Product</th>
-                                <th>SKU</th>
-                                <th>Qty Sold</th>
-                                <th>Revenue</th>
+                            <tr class="border-b border-[#272C35] text-[#8A8A93] uppercase font-bold text-[9px] bg-[#111419]/30">
+                                <th class="py-2 px-3">Product</th>
+                                <th class="py-2 px-2 text-right">Sold</th>
+                                <th class="py-2 px-3 text-right">Revenue</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($topProducts as $index => $item)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td><strong>{{ $item->product?->name ?? $item->item_label ?? 'Deleted Product' }}</strong></td>
-                                <td>{{ $item->product?->sku ?? 'N/A' }}</td>
-                                <td>{{ $item->total_qty }}</td>
-                                <td class="fw-bold">Rs. {{ number_format($item->total_revenue, 2) }}</td>
-                            </tr>
+                            @forelse($activeMetrics['top_products'] as $item)
+                                @php
+                                    $share = $activeMetrics['revenue'] > 0 ? round(($item->total_revenue / $activeMetrics['revenue']) * 100, 1) : 0;
+                                @endphp
+                                <tr class="border-b border-[#272C35]/50 last:border-0 hover:bg-[#1E222A] transition-colors">
+                                    <td class="py-2 px-3">
+                                        <div class="flex items-center gap-2">
+                                            @if($item->product?->image_url)
+                                                <img src="{{ $item->product->image_url }}" alt="" class="w-7 h-7 rounded object-cover border border-white/10 shrink-0">
+                                            @else
+                                                <div class="w-7 h-7 rounded bg-surface-variant flex items-center justify-center text-[#8A8A93] border border-[#272C35] shrink-0">
+                                                    <span class="material-symbols-outlined text-[14px]">inventory_2</span>
+                                                </div>
+                                            @endif
+                                            <div class="truncate max-w-[140px]">
+                                                <span class="font-bold text-white block truncate" title="{{ $item->product?->name }}">{{ $item->product?->name ?? 'Deleted Product' }}</span>
+                                                <span class="text-[9px] font-mono text-[#8A8A93]">{{ $item->product?->sku ?? '—' }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-2 text-right font-semibold text-white tabular-nums">
+                                        {{ $item->total_qty }}
+                                    </td>
+                                    <td class="py-2 px-3 text-right tabular-nums">
+                                        <span class="font-bold text-amber-accent block">Rs. {{ number_format($item->total_revenue, 0) }}</span>
+                                        <div class="w-16 ml-auto h-1 bg-[#111419] rounded-full overflow-hidden border border-[#272C35] mt-0.5">
+                                            <div class="h-full bg-amber-accent rounded-full" style="width: {{ min(100, $share * 2) }}%;"></div>
+                                        </div>
+                                    </td>
+                                </tr>
                             @empty
-                            <tr><td colspan="5" class="text-center text-muted">No sales recorded for this date.</td></tr>
+                                <tr>
+                                    <td colspan="3" class="text-center py-8 text-[#8A8A93]">No sales recorded in this period.</td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- ---- Monthly Report Tab ---- -->
-    <div class="tab-pane fade" id="monthly" role="tabpanel">
-        <div class="pos-card card mb-4">
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-8 col-md-3">
-                        <label class="form-label small fw-semibold">Month</label>
-                        <select name="month" class="form-select">
-                            @foreach($availableMonths as $availMonth)
-                            <option value="{{ $availMonth }}" {{ $availMonth === $month ? 'selected' : '' }}>
-                                {{ \Carbon\Carbon::parse($availMonth . '-01')->format('F Y') }}
-                            </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <form method="GET" action="{{ route('reports.index') }}">
-                            <button type="submit" class="btn btn-dark-blue w-100"><i class="fas fa-search me-1"></i> Generate</button>
-                        </form>
+            <!-- 2. Sales by Staff -->
+            <div class="dashboard-card rounded-[8px] overflow-hidden bg-[#171A20] border border-[#272C35] flex flex-col">
+                <div class="p-3 border-b border-[#272C35] flex items-center justify-between bg-[#111419]/60">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-amber-accent">badge</span>
+                        <h4 class="m-0 text-[12px] font-bold text-white">Sales by Staff</h4>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-4">
-                <div class="stat-card gold p-3">
-                    <div class="stat-label">Total Sales</div>
-                    <div class="stat-value">{{ $monthlyTotalSales }}</div>
+                <div class="p-3 flex flex-col gap-3 flex-1 overflow-y-auto custom-scrollbar">
+                    @forelse($activeMetrics['staff_sales'] as $staff)
+                        @php
+                            $share = $activeMetrics['revenue'] > 0 ? round(($staff->revenue / $activeMetrics['revenue']) * 100, 1) : 0;
+                        @endphp
+                        <div class="flex flex-col gap-1 text-[11px] p-2 rounded bg-[#111419] border border-[#272C35]/60">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center text-[10px] font-bold text-amber-accent border border-[#272C35]">
+                                        {{ strtoupper(substr($staff->name, 0, 1)) }}
+                                    </div>
+                                    <span class="font-bold text-white">{{ $staff->name }}</span>
+                                </div>
+                                <span class="font-bold text-emerald-400 tabular-nums">Rs. {{ number_format($staff->revenue, 2) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between text-[10px] text-[#8A8A93] pt-1 border-t border-[#272C35]/40">
+                                <span>{{ $staff->transactions }} transactions · Avg: Rs. {{ number_format($staff->avg_sale, 0) }}</span>
+                                <span class="font-bold text-amber-accent">{{ $share }}% share</span>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="py-8 text-center text-[#8A8A93] text-[11px]">
+                            No staff transaction records in this period.
+                        </div>
+                    @endforelse
                 </div>
             </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card blue p-3">
-                    <div class="stat-label">Revenue</div>
-                    <div class="stat-value">Rs. {{ number_format($monthlyRevenue, 0) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card green p-3">
-                    <div class="stat-label">Items Sold</div>
-                    <div class="stat-value">{{ $monthlyItemsSold }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card warning p-3">
-                    <div class="stat-label">Total Refunds</div>
-                    <div class="stat-value">{{ $monthlyTotalRefunds }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card red p-3">
-                    <div class="stat-label">Refund Value</div>
-                    <div class="stat-value">Rs. {{ number_format($monthlyRefundValue, 0) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card warning p-3">
-                    <div class="stat-label">Avg. Daily Sales</div>
-                    <div class="stat-value">Rs. {{ number_format($monthlyAvgDaily, 0) }}</div>
-                </div>
-            </div>
-        </div>
 
-        <div class="pos-card card">
-            <div class="card-body">
-                <h5 class="mb-3"><i class="fas fa-chart-bar me-2 text-gold"></i> Monthly Sales Trend</h5>
-                <canvas id="monthlyChart" height="120" style="max-height:280px;"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- ---- Custom Range Tab ---- -->
-    <div class="tab-pane fade" id="custom" role="tabpanel">
-        <div class="pos-card card mb-4">
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small fw-semibold">From Date</label>
-                        <input type="date" name="date_from" class="form-control" value="{{ $dateFrom }}">
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small fw-semibold">To Date</label>
-                        <input type="date" name="date_to" class="form-control" value="{{ $dateTo }}">
-                    </div>
-                    <div class="col-12 col-md-2">
-                        <form method="GET" action="{{ route('reports.index') }}">
-                            <button type="submit" class="btn btn-dark-blue w-100"><i class="fas fa-search me-1"></i> Generate</button>
-                        </form>
+            <!-- 3. Sales by Category -->
+            <div class="dashboard-card rounded-[8px] overflow-hidden bg-[#171A20] border border-[#272C35] flex flex-col">
+                <div class="p-3 border-b border-[#272C35] flex items-center justify-between bg-[#111419]/60">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-amber-accent">category</span>
+                        <h4 class="m-0 text-[12px] font-bold text-white">Sales by Category</h4>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-4">
-                <div class="stat-card gold p-3">
-                    <div class="stat-label">Total Sales</div>
-                    <div class="stat-value">{{ $customTotalSales }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card blue p-3">
-                    <div class="stat-label">Revenue</div>
-                    <div class="stat-value">Rs. {{ number_format($customRevenue, 0) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card green p-3">
-                    <div class="stat-label">Items Sold</div>
-                    <div class="stat-value">{{ $customItemsSold }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card warning p-3">
-                    <div class="stat-label">Total Refunds</div>
-                    <div class="stat-value">{{ $customTotalRefunds }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card red p-3">
-                    <div class="stat-label">Refund Value</div>
-                    <div class="stat-value">Rs. {{ number_format($customRefundValue, 0) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="stat-card warning p-3">
-                    <div class="stat-label">Avg. Daily Sales</div>
-                    <div class="stat-value">Rs. {{ number_format($customAvgDaily, 0) }}</div>
+                <div class="p-3 flex flex-col gap-2.5 flex-1 overflow-y-auto custom-scrollbar">
+                    @forelse($activeMetrics['category_sales'] as $cat)
+                        @php
+                            $share = $activeMetrics['revenue'] > 0 ? round(($cat->total_revenue / $activeMetrics['revenue']) * 100, 1) : 0;
+                        @endphp
+                        <div class="flex flex-col gap-1 text-[11px]">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-white">{{ $cat->category }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-amber-accent tabular-nums">Rs. {{ number_format($cat->total_revenue, 0) }}</span>
+                                    <span class="text-[10px] text-[#8A8A93] font-bold w-9 text-right">{{ $share }}%</span>
+                                </div>
+                            </div>
+                            <div class="w-full h-1.5 bg-[#111419] rounded-full overflow-hidden border border-[#272C35]">
+                                <div class="h-full bg-amber-accent rounded-full" style="width: {{ $share }}%;"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="py-8 text-center text-[#8A8A93] text-[11px]">
+                            No category data in this period.
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
 
-        <div class="pos-card card">
-            <div class="card-body">
-                <h5 class="mb-3"><i class="fas fa-chart-area me-2 text-gold"></i> Custom Range Revenue</h5>
-                <canvas id="customChart" height="120" style="max-height:280px;"></canvas>
-            </div>
-        </div>
-    </div>
-
-    {{-- ======================================================
-         STOCK REPORT TAB
-         ====================================================== --}}
-    <div class="tab-pane fade {{ $tab === 'stock' ? 'show active' : '' }}" id="stock" role="tabpanel">
-
-        {{-- Summary Cards --}}
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="stat-card gold p-3 text-center">
-                    <div class="stat-label">Total Products</div>
-                    <div class="stat-value">{{ $stockProductCount }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="stat-card blue p-3 text-center">
-                    <div class="stat-label">Inventory Value</div>
-                    <div class="stat-value" style="font-size:1rem;">Rs.&nbsp;{{ number_format($stockTotalValue, 0) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="stat-card green p-3 text-center">
-                    <div class="stat-label">All-Time Revenue</div>
-                    <div class="stat-value" style="font-size:1rem;">Rs.&nbsp;{{ number_format($stockAllTimeRevenue, 0) }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="stat-card warning p-3 text-center">
-                    <div class="stat-label">In Stock</div>
-                    <div class="stat-value">{{ $stockProductCount - $stockOutCount }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="stat-card warning p-3 text-center" style="background:#fff7ed;border-left:4px solid #f59e0b!important;">
-                    <div class="stat-label">Low Stock (≤5)</div>
-                    <div class="stat-value text-warning fw-bold">{{ $stockLowCount }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="stat-card p-3 text-center" style="background:#fff1f2;border-left:4px solid #ef4444!important;">
-                    <div class="stat-label">Out of Stock</div>
-                    <div class="stat-value" style="color:#ef4444;font-weight:800;">{{ $stockOutCount }}</div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Filters + Export --}}
-        <div class="pos-card card mb-3">
-            <div class="card-body py-3">
-                <div class="row g-2 align-items-center">
-                    <div class="col-12 col-sm-6 col-md-3">
-                        <input type="text" id="stockSearch" class="form-control form-control-sm"
-                               placeholder="Search product / SKU…" oninput="filterStockTable()">
+    @else
+        <!-- ========================================================
+             STOCK REPORT TAB VIEW
+             ======================================================== -->
+        <!-- Stock 6-Card KPI Row -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 shrink-0">
+            <x-pos.kpi-card title="Total Products" icon="inventory_2" :value="$stockProductCount" :is-primary="true" subtext="Catalog Units" />
+            <x-pos.kpi-card title="Inventory Value" icon="account_balance_wallet" :value="'Rs. ' . number_format($stockTotalValue, 0)" subtext="Retail Value" />
+            <x-pos.kpi-card title="All-Time Revenue" icon="payments" :value="'Rs. ' . number_format($stockAllTimeRevenue, 0)" subtext="Cumulative" />
+            <x-pos.kpi-card title="Healthy Stock" icon="check_circle" :value="$stockProductCount - $stockOutCount - $stockLowCount" subtext="In Stock > 5" />
+            
+            <!-- Low Stock Card -->
+            <div class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden border-l-2 border-l-amber-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-[0.08em] truncate">Low Stock (≤5)</span>
+                        <span class="material-symbols-outlined text-[16px] text-amber-400 shrink-0">warning</span>
                     </div>
-                    <div class="col-6 col-sm-6 col-md-2">
-                        <select id="stockCategoryFilter" class="form-select form-select-sm" onchange="filterStockTable()">
-                            <option value="">All Categories</option>
-                            @foreach($stockProducts->pluck('category')->filter()->unique()->sort() as $cat)
-                                <option value="{{ $cat }}">{{ $cat }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-6 col-sm-6 col-md-2">
-                        <select id="stockStatusFilter" class="form-select form-select-sm" onchange="filterStockTable()">
-                            <option value="">All Status</option>
-                            <option value="in">In Stock</option>
-                            <option value="low">Low Stock</option>
-                            <option value="out">Out of Stock</option>
-                        </select>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-amber-400 tracking-tight tabular-nums">
+                        {{ $stockLowCount }}
                     </div>
                 </div>
+                <div class="text-[10px] text-[#8A8A93] mt-1">Reorder suggested</div>
+            </div>
+
+            <!-- Out of Stock Card -->
+            <div class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden border-l-2 border-l-rose-500">
+                <div>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[10px] font-bold text-rose-400 uppercase tracking-[0.08em] truncate">Out of Stock</span>
+                        <span class="material-symbols-outlined text-[16px] text-rose-400 shrink-0">error</span>
+                    </div>
+                    <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-rose-400 tracking-tight tabular-nums">
+                        {{ $stockOutCount }}
+                    </div>
+                </div>
+                <div class="text-[10px] text-[#8A8A93] mt-1">Immediate action</div>
             </div>
         </div>
 
-        {{-- Product Table - Desktop --}}
-        <div class="pos-card card d-none d-md-block">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table pos-table mb-0" id="stock-table">
-                        <thead>
-                            <tr>
-                                <th style="width:40px;">#</th>
-                                <th>Product</th>
-                                <th>SKU</th>
-                                <th>Category</th>
-                                <th class="text-end">Unit Price</th>
-                                <th class="text-center">Stock</th>
-                                <th class="text-end">Inv. Value</th>
-                                <th class="text-center">Units Sold</th>
-                                <th class="text-end">Revenue</th>
-                                <th class="text-end" style="white-space:nowrap;">% of Total</th>
-                                <th>Last Sold</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($stockProducts as $i => $p)
+        <!-- Dense Stock Inventory Table -->
+        <div class="dashboard-card rounded-[8px] overflow-hidden bg-[#171A20] border border-[#272C35] flex flex-col">
+            <div class="px-4 py-2.5 border-b border-[#272C35] flex items-center justify-between bg-[#111419]/60">
+                <span class="font-bold text-white text-[13px]">Stock Valuation & Movement Ledger</span>
+                <span class="text-[11px] text-[#8A8A93]">{{ $stockProducts->count() }} items recorded</span>
+            </div>
+
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left text-[11px]" id="stock-table">
+                    <thead>
+                        <tr class="border-b border-[#272C35] text-[#8A8A93] font-bold uppercase text-[9px] bg-[#111419]/30">
+                            <th class="py-2.5 px-3.5">Product</th>
+                            <th class="py-2.5 px-2.5">SKU</th>
+                            <th class="py-2.5 px-2.5">Category</th>
+                            <th class="py-2.5 px-3 text-right">Unit Price</th>
+                            <th class="py-2.5 px-3 text-center">Stock</th>
+                            <th class="py-2.5 px-3 text-right">Inv. Value</th>
+                            <th class="py-2.5 px-3 text-center">Sold Units</th>
+                            <th class="py-2.5 px-3 text-right">Revenue</th>
+                            <th class="py-2.5 px-3">Last Sold</th>
+                            <th class="py-2.5 px-3.5 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($stockProducts as $i => $p)
                             @php
-                                $pct = $stockAllTimeRevenue > 0 ? ($p->total_revenue / $stockAllTimeRevenue * 100) : 0;
-                                if ($p->stock <= 0)     $status = 'out';
-                                elseif ($p->stock <= 5) $status = 'low';
-                                else                    $status = 'in';
+                                $status = $p->stock <= 0 ? 'out' : ($p->stock <= 5 ? 'low' : 'in');
                             @endphp
-                            <tr class="stock-row"
+                            <tr class="stock-row border-b border-[#272C35]/50 last:border-0 hover:bg-[#1E222A] transition-colors"
                                 data-name="{{ strtolower($p->name) }}"
                                 data-sku="{{ strtolower($p->sku ?? '') }}"
                                 data-cat="{{ $p->category ?? '' }}"
                                 data-status="{{ $status }}">
-                                <td class="text-muted">{{ $i + 1 }}</td>
-                                <td>
-                                    <div class="fw-semibold">{{ $p->name }}</div>
-                                    @if($p->subcategory)
-                                        <small class="text-muted">{{ $p->subcategory }}</small>
-                                    @endif
+                                <td class="py-2.5 px-3.5 font-bold text-white">
+                                    {{ $p->name }}
                                 </td>
-                                <td class="text-muted small">{{ $p->sku ?? '—' }}</td>
-                                <td class="small">{{ $p->category ?? '—' }}</td>
-                                <td class="text-end">Rs. {{ number_format($p->price, 2) }}</td>
-                                <td class="text-center fw-bold {{ $p->stock <= 0 ? 'text-danger' : ($p->stock <= 5 ? 'text-warning' : '') }}">
+                                <td class="py-2.5 px-2.5 font-mono text-[#8A8A93]">
+                                    {{ $p->sku ?? '—' }}
+                                </td>
+                                <td class="py-2.5 px-2.5 text-[#d7c3ae]">
+                                    {{ $p->category ?? '—' }}
+                                </td>
+                                <td class="py-2.5 px-3 text-right font-medium text-white tabular-nums">
+                                    Rs. {{ number_format($p->price, 2) }}
+                                </td>
+                                <td class="py-2.5 px-3 text-center font-bold tabular-nums {{ $p->stock <= 0 ? 'text-rose-400' : ($p->stock <= 5 ? 'text-amber-400' : 'text-emerald-400') }}">
                                     {{ $p->stock }}
                                 </td>
-                                <td class="text-end text-muted">Rs. {{ number_format($p->stock_value, 2) }}</td>
-                                <td class="text-center">{{ $p->total_sold > 0 ? number_format($p->total_sold) : '—' }}</td>
-                                <td class="text-end fw-semibold {{ $p->total_revenue > 0 ? 'text-gold' : 'text-muted' }}">
-                                    {{ $p->total_revenue > 0 ? 'Rs. ' . number_format($p->total_revenue, 2) : '—' }}
+                                <td class="py-2.5 px-3 text-right font-medium text-[#d7c3ae] tabular-nums">
+                                    Rs. {{ number_format($p->stock_value, 2) }}
                                 </td>
-                                <td class="text-end">
-                                    @if($pct > 0)
-                                    <div class="small fw-semibold">{{ number_format($pct, 1) }}%</div>
-                                    <div class="progress mt-1" style="height:4px;min-width:50px;">
-                                        <div class="progress-bar" role="progressbar"
-                                             style="width:{{ min($pct * 2, 100) }}%;background:var(--gold);"></div>
-                                    </div>
-                                    @else
-                                    <span class="text-muted">—</span>
-                                    @endif
+                                <td class="py-2.5 px-3 text-center text-white tabular-nums">
+                                    {{ $p->total_sold }}
                                 </td>
-                                <td class="small text-muted">
-                                    {{ $p->last_sold_at ? \Carbon\Carbon::parse($p->last_sold_at)->format('d M Y') : '—' }}
+                                <td class="py-2.5 px-3 text-right font-bold text-amber-accent tabular-nums">
+                                    Rs. {{ number_format($p->total_revenue, 2) }}
                                 </td>
-                                <td class="text-center">
+                                <td class="py-2.5 px-3 text-[#8A8A93]">
+                                    {{ $p->last_sold_at ? \Carbon\Carbon::parse($p->last_sold_at)->format('M d, Y') : 'Never' }}
+                                </td>
+                                <td class="py-2.5 px-3.5 text-center">
                                     @if($status === 'out')
-                                        <span class="badge fw-semibold" style="background:#fee2e2;color:#ef4444;">Out of Stock</span>
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/25">Out</span>
                                     @elseif($status === 'low')
-                                        <span class="badge fw-semibold" style="background:#fef3c7;color:#d97706;">Low Stock</span>
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/25">Low</span>
                                     @else
-                                        <span class="badge fw-semibold" style="background:#dcfce7;color:#10b981;">In Stock</span>
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">In Stock</span>
                                     @endif
                                 </td>
                             </tr>
-                            @empty
-                            <tr><td colspan="12" class="text-center py-4 text-muted">No products found.</td></tr>
-                            @endforelse
-                        </tbody>
-                        <tfoot>
-                            <tr style="background:#f8f9fa;font-weight:700;">
-                                <td colspan="4" class="text-end">TOTALS</td>
-                                <td></td>
-                                <td class="text-center">{{ $stockProducts->sum('stock') }}</td>
-                                <td class="text-end">Rs. {{ number_format($stockTotalValue, 2) }}</td>
-                                <td class="text-center">{{ number_format($stockProducts->sum('total_sold')) }}</td>
-                                <td class="text-end text-gold">Rs. {{ number_format($stockAllTimeRevenue, 2) }}</td>
-                                <td colspan="3"></td>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="text-center py-8 text-[#8A8A93]">No products match stock filters.</td>
                             </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
+    @endif
 
-        {{-- Product Cards - Mobile --}}
-        <div class="d-md-none">
-            @forelse($stockProducts as $i => $p)
-            @php
-                $pct = $stockAllTimeRevenue > 0 ? ($p->total_revenue / $stockAllTimeRevenue * 100) : 0;
-                if ($p->stock <= 0)     $status = 'out';
-                elseif ($p->stock <= 5) $status = 'low';
-                else                    $status = 'in';
-            @endphp
-            <div class="pos-card card mb-2 stock-row-mobile"
-                 data-name="{{ strtolower($p->name) }}"
-                 data-sku="{{ strtolower($p->sku ?? '') }}"
-                 data-cat="{{ $p->category ?? '' }}"
-                 data-status="{{ $status }}">
-                <div class="card-body py-2 px-3">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="fw-semibold text-truncate">{{ $p->name }}</div>
-                            <small class="text-muted">{{ $p->sku ?? '—' }} · {{ $p->category ?? '—' }}</small>
-                        </div>
-                        <div class="ms-2 flex-shrink-0">
-                            @if($status === 'out')
-                                <span class="badge fw-semibold" style="background:#fee2e2;color:#ef4444;font-size:0.7rem;">Out</span>
-                            @elseif($status === 'low')
-                                <span class="badge fw-semibold" style="background:#fef3c7;color:#d97706;font-size:0.7rem;">Low</span>
-                            @else
-                                <span class="badge fw-semibold" style="background:#dcfce7;color:#10b981;font-size:0.7rem;">In Stock</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="row g-1 text-center" style="font-size:0.78rem;">
-                        <div class="col-3">
-                            <div class="text-muted">Price</div>
-                            <div class="fw-semibold">Rs.{{ number_format($p->price, 0) }}</div>
-                        </div>
-                        <div class="col-2">
-                            <div class="text-muted">Stock</div>
-                            <div class="fw-bold {{ $p->stock <= 0 ? 'text-danger' : ($p->stock <= 5 ? 'text-warning' : '') }}">{{ $p->stock }}</div>
-                        </div>
-                        <div class="col-3">
-                            <div class="text-muted">Sold</div>
-                            <div class="fw-semibold">{{ $p->total_sold > 0 ? number_format($p->total_sold) : '—' }}</div>
-                        </div>
-                        <div class="col-4">
-                            <div class="text-muted">Revenue</div>
-                            <div class="fw-semibold {{ $p->total_revenue > 0 ? 'text-gold' : 'text-muted' }}">{{ $p->total_revenue > 0 ? 'Rs.' . number_format($p->total_revenue, 0) : '—' }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @empty
-            <div class="text-center py-4 text-muted">No products found.</div>
-            @endforelse
-
-            {{-- Mobile Totals --}}
-            @if($stockProducts->count())
-            <div class="pos-card card mt-2">
-                <div class="card-body py-2 px-3">
-                    <div class="row g-1 text-center" style="font-size:0.8rem;font-weight:700;">
-                        <div class="col-4">
-                            <div class="text-muted fw-normal">Total Stock</div>
-                            <div>{{ $stockProducts->sum('stock') }}</div>
-                        </div>
-                        <div class="col-4">
-                            <div class="text-muted fw-normal">Inv. Value</div>
-                            <div>Rs.{{ number_format($stockTotalValue, 0) }}</div>
-                        </div>
-                        <div class="col-4">
-                            <div class="text-muted fw-normal">Revenue</div>
-                            <div class="text-gold">Rs.{{ number_format($stockAllTimeRevenue, 0) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endif
-        </div>
-
-    </div> {{-- /stock tab --}}
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    // Daily Hourly Chart
-    const hourlyCtx = document.getElementById('dailyHourlyChart')?.getContext('2d');
-    if (hourlyCtx) {
-        new Chart(hourlyCtx, {
-            type: 'bar',
-            data: {
-                labels: ['9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM'],
-                datasets: [{
-                    label: 'Sales (Rs.)',
-                    data: @json(array_values($hourlySales)),
-                    backgroundColor: 'rgba(245,166,35,0.6)',
-                    borderColor: '#F5A623',
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { callback: v => 'Rs.' + (v/1000) + 'K' } } }
+function reportsApp(config) {
+    return {
+        tab: config.tab || 'daily',
+        date: config.date,
+        month: config.month,
+        dateFrom: config.dateFrom,
+        dateTo: config.dateTo,
+
+        buildExportQuery() {
+            let p = '?tab=' + encodeURIComponent(this.tab);
+            if (this.tab === 'daily') {
+                p += '&date=' + encodeURIComponent(this.date);
+            } else if (this.tab === 'monthly') {
+                p += '&month=' + encodeURIComponent(this.month);
+            } else if (this.tab === 'custom') {
+                p += '&date_from=' + encodeURIComponent(this.dateFrom) + '&date_to=' + encodeURIComponent(this.dateTo);
             }
-        });
+            return p;
+        },
+
+        applyPreset(preset) {
+            const today = new Date();
+            const formatDate = (d) => d.toISOString().split('T')[0];
+
+            let from = new Date(today);
+            let to = new Date(today);
+
+            if (preset === 'today') {
+                // from = to = today
+            } else if (preset === 'yesterday') {
+                from.setDate(today.getDate() - 1);
+                to.setDate(today.getDate() - 1);
+            } else if (preset === 'last7') {
+                from.setDate(today.getDate() - 6);
+            } else if (preset === 'last30') {
+                from.setDate(today.getDate() - 29);
+            } else if (preset === 'this_month') {
+                from = new Date(today.getFullYear(), today.getMonth(), 1);
+            } else if (preset === 'last_month') {
+                from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                to = new Date(today.getFullYear(), today.getMonth(), 0);
+            }
+
+            const fromStr = formatDate(from);
+            const toStr = formatDate(to);
+
+            document.getElementById('customDateFrom').value = fromStr;
+            document.getElementById('customDateTo').value = toStr;
+            this.dateFrom = fromStr;
+            this.dateTo = toStr;
+        },
+
+        syncShopify() {
+            if (!confirm('Fetch latest products & inventory from Shopify?')) return;
+            fetch('{{ route("shopify.sync") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message || 'Sync finished.');
+                if (data.success) location.reload();
+            })
+            .catch(() => alert('Network error during sync.'));
+        }
+    };
+}
+
+// Chart.js Dark Mode Global Defaults
+if (window.Chart) {
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.40)';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+    Chart.defaults.font.family = "'Inter', system-ui, -apple-system, sans-serif";
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Sales Trend Chart
+    const trendCtx = document.getElementById('salesTrendChart')?.getContext('2d');
+    if (trendCtx) {
+        @if($currentTab === 'daily')
+            // Hourly Chart
+            const hourlyLabels = ['8AM','9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM'];
+            const hourlySales = @json(array_values($hourlySales));
+            const prevHourlySales = @json(array_values($prevHourlySales));
+            const hourlyTransactions = @json(array_values($hourlyTransactions));
+            const hourlyItems = @json(array_values($hourlyItems));
+
+            new Chart(trendCtx, {
+                type: 'bar',
+                data: {
+                    labels: hourlyLabels,
+                    datasets: [
+                        {
+                            type: 'line',
+                            label: 'Yesterday',
+                            data: prevHourlySales,
+                            borderColor: 'rgba(255, 255, 255, 0.25)',
+                            borderDash: [4, 4],
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.3
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Today (Rs.)',
+                            data: hourlySales,
+                            backgroundColor: 'rgba(245, 166, 35, 0.65)',
+                            hoverBackgroundColor: 'rgba(245, 166, 35, 0.90)',
+                            borderColor: '#F5A623',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#13151A',
+                            titleColor: '#FFFFFF',
+                            bodyColor: '#d7c3ae',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    if (context.dataset.type === 'line') {
+                                        return 'Yesterday: Rs. ' + (context.raw || 0).toLocaleString();
+                                    }
+                                    return [
+                                        'Revenue: Rs. ' + (context.raw || 0).toLocaleString(),
+                                        'Transactions: ' + (hourlyTransactions[idx] || 0),
+                                        'Items Sold: ' + (hourlyItems[idx] || 0)
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { callback: v => 'Rs.' + (v >= 1000 ? (v/1000) + 'k' : v) }
+                        }
+                    }
+                }
+            });
+
+        @elseif($currentTab === 'monthly')
+            new Chart(trendCtx, {
+                type: 'bar',
+                data: {
+                    labels: @json($monthlyChartLabels),
+                    datasets: [{
+                        label: 'Daily Net (Rs.)',
+                        data: @json($monthlyChartData),
+                        backgroundColor: 'rgba(245, 166, 35, 0.65)',
+                        borderColor: '#F5A623',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { callback: v => 'Rs.' + (v >= 1000 ? (v/1000) + 'k' : v) }
+                        }
+                    }
+                }
+            });
+
+        @elseif($currentTab === 'custom')
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: @json($customChartLabels),
+                    datasets: [{
+                        label: 'Revenue (Rs.)',
+                        data: @json($customChartData),
+                        borderColor: '#F5A623',
+                        backgroundColor: 'rgba(245, 166, 35, 0.10)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#F5A623',
+                        pointBorderColor: '#13151A',
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { callback: v => 'Rs.' + (v >= 1000 ? (v/1000) + 'k' : v) }
+                        }
+                    }
+                }
+            });
+        @endif
     }
 
-    // Daily Payment Chart
-    const dailyPayCtx = document.getElementById('dailyPaymentChart')?.getContext('2d');
-    if (dailyPayCtx) {
-        new Chart(dailyPayCtx, {
+    // 2. Payment Breakdown Donut Chart
+    const payCtx = document.getElementById('paymentDonutChart')?.getContext('2d');
+    if (payCtx) {
+        const paymentLabels = @json($nonZeroPayments->keys()->map(fn($m) => ucfirst(str_replace('_', ' ', $m))));
+        const paymentValues = @json($nonZeroPayments->values()->map(fn($v) => max(0, $v)));
+        const paymentColors = @json($nonZeroPayments->keys()->map(fn($m) => $paymentColors[$m] ?? '#64748B'));
+
+        new Chart(payCtx, {
             type: 'doughnut',
             data: {
-                labels: @json(collect($payments)->filter(fn($amount) => abs($amount) > 0.01)->keys()->map(fn($method) => ucfirst($method))->values()),
+                labels: paymentLabels,
                 datasets: [{
-                    data: @json(collect($payments)->filter(fn($amount) => abs($amount) > 0.01)->values()->map(fn($amount) => abs($amount))->values()),
-                    backgroundColor: ['#10B981', '#3B82F6', '#F5A623', '#F59E0B', '#6B7280'],
-                    borderWidth: 0
+                    data: paymentValues,
+                    backgroundColor: paymentColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
                 }]
             },
             options: {
                 responsive: true,
-                cutout: '65%',
-                plugins: { legend: { display: false } }
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#13151A',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 8,
+                        callbacks: {
+                            label: ctx => ' Rs. ' + (ctx.raw || 0).toLocaleString()
+                        }
+                    }
+                }
             }
         });
     }
+});
 
-    // Monthly chart
-    const monthlyCtx = document.getElementById('monthlyChart')?.getContext('2d');
-    if (monthlyCtx) {
-        new Chart(monthlyCtx, {
-            type: 'bar',
-            data: {
-                labels: @json($monthlyChartLabels),
-                datasets: [{
-                    label: 'Daily Revenue (Rs.)',
-                    data: @json($monthlyChartData),
-                    backgroundColor: 'rgba(245,166,35,0.5)',
-                    borderColor: '#F5A623',
-                    borderWidth: 1,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { callback: v => 'Rs.' + (v/1000) + 'K' } } }
-            }
-        });
-    }
+// Live Stock Table Filtering
+function filterStockTable() {
+    const q   = document.getElementById('stockSearch')?.value.toLowerCase().trim() ?? '';
+    const cat = document.getElementById('stockCategoryFilter')?.value ?? '';
+    const st  = document.getElementById('stockStatusFilter')?.value ?? '';
 
-    // Custom range chart
-    const customCtx = document.getElementById('customChart')?.getContext('2d');
-    if (customCtx) {
-        new Chart(customCtx, {
-            type: 'line',
-            data: {
-                labels: @json($customChartLabels),
-                datasets: [{
-                    label: 'Revenue (Rs.)',
-                    data: @json($customChartData),
-                    borderColor: '#F5A623',
-                    backgroundColor: 'rgba(245,166,35,0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#F5A623'
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { callback: v => 'Rs.' + (v/1000).toFixed(1) + 'K' } } }
-            }
-        });
-    }
-    // Sync Shopify
-    function syncShopify() {
-        const btn = document.getElementById('sync-btn');
-        const icon = btn.querySelector('i');
-        
-        if (!confirm('This will fetch latest products from Shopify. Continue?')) return;
+    document.querySelectorAll('#stock-table .stock-row').forEach(row => {
+        const name = row.dataset.name || '';
+        const sku  = row.dataset.sku  || '';
+        const rCat = row.dataset.cat  || '';
+        const rSt  = row.dataset.status || '';
 
-        btn.disabled = true;
-        icon.classList.add('fa-spin');
-        btn.innerHTML = '<i class="fas fa-sync-alt fa-spin me-1"></i> Syncing...';
+        const matchQ   = !q   || name.includes(q) || sku.includes(q);
+        const matchCat = !cat || rCat === cat;
+        const matchSt  = !st  || rSt === st;
 
-        fetch('{{ route("shopify.sync") }}', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.disabled) {
-                alert(data.message);
-            } else if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Sync Failed: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            alert('Network Error during sync.');
-            console.error(error);
-        })
-        .finally(() => {
-            btn.disabled = false;
-            icon.classList.remove('fa-spin');
-            btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Sync Shopify';
-        });
-    }
-
-    // ---- Active tab detection helper ----
-    function getActiveTab() {
-        const panes = ['daily','monthly','custom','stock'];
-        for (const id of panes) {
-            const el = document.getElementById(id);
-            if (el && el.classList.contains('show') && el.classList.contains('active')) return id;
-        }
-        return 'daily';
-    }
-
-    function buildQueryParams(tab) {
-        let p = '?tab=' + encodeURIComponent(tab);
-        if (tab === 'daily') {
-            const d = document.querySelector('input[name="date"]');
-            if (d?.value) p += '&date=' + encodeURIComponent(d.value);
-        } else if (tab === 'monthly') {
-            const m = document.querySelector('select[name="month"]');
-            if (m?.value) p += '&month=' + encodeURIComponent(m.value);
-        } else if (tab === 'custom') {
-            const f = document.querySelector('input[name="date_from"]');
-            const t = document.querySelector('input[name="date_to"]');
-            if (f?.value) p += '&date_from=' + encodeURIComponent(f.value);
-            if (t?.value) p += '&date_to='   + encodeURIComponent(t.value);
-        }
-        return p;
-    }
-
-    // ---- Export PDF ----
-    function exportPDF()        { exportReportPDF(getActiveTab()); }
-    function exportReportPDF(tab) {
-        window.location.href = '{{ route("reports.exportPdf") }}' + buildQueryParams(tab);
-    }
-
-    // ---- Export Excel ----
-    function exportExcel()        { exportReportExcel(getActiveTab()); }
-    function exportReportExcel(tab) {
-        window.location.href = '{{ route("reports.exportExcel") }}' + buildQueryParams(tab);
-    }
-
-    // ---- Stock table live filter ----
-    function filterStockTable() {
-        const q   = document.getElementById('stockSearch')?.value.toLowerCase()   ?? '';
-        const cat = document.getElementById('stockCategoryFilter')?.value         ?? '';
-        const st  = document.getElementById('stockStatusFilter')?.value           ?? '';
-        // Desktop table rows
-        document.querySelectorAll('#stock-table .stock-row').forEach(row => {
-            const matchQ   = !q   || row.dataset.name.includes(q) || row.dataset.sku.includes(q);
-            const matchCat = !cat || row.dataset.cat === cat;
-            const matchSt  = !st  || row.dataset.status === st;
-            row.style.display = (matchQ && matchCat && matchSt) ? '' : 'none';
-        });
-        // Mobile cards
-        document.querySelectorAll('.stock-row-mobile').forEach(card => {
-            const matchQ   = !q   || card.dataset.name.includes(q) || card.dataset.sku.includes(q);
-            const matchCat = !cat || card.dataset.cat === cat;
-            const matchSt  = !st  || card.dataset.status === st;
-            card.style.display = (matchQ && matchCat && matchSt) ? '' : 'none';
-        });
-    }
+        row.style.display = (matchQ && matchCat && matchSt) ? '' : 'none';
+    });
+}
 </script>
 @endpush

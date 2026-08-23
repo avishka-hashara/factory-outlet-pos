@@ -39,21 +39,46 @@ class ReportsController extends Controller
         $refundStats = $this->refundStatsBetween($dayStart, $dayEnd);
         $totalRefunds = $refundStats['count'];
         $refundValue = $refundStats['value'];
-
         $itemsSold = $this->netItemsSoldBetween($dayStart, $dayEnd);
-
         $avgSale = $totalSales > 0 ? $revenue / $totalSales : 0;
+
+        // Daily comparison vs yesterday
+        $yesterdayStart = $carbonDate->copy()->subDay()->startOfDay();
+        $yesterdayEnd = $carbonDate->copy()->subDay()->endOfDay();
+        $prevTotalSales = Sale::whereBetween('created_at', [$yesterdayStart, $yesterdayEnd])->count();
+        $prevRevenue = $this->netRevenueBetween($yesterdayStart, $yesterdayEnd);
+        $prevItemsSold = $this->netItemsSoldBetween($yesterdayStart, $yesterdayEnd);
+        $prevRefundStats = $this->refundStatsBetween($yesterdayStart, $yesterdayEnd);
+        $prevRefundValue = $prevRefundStats['value'];
+        $prevTotalRefunds = $prevRefundStats['count'];
+        $prevAvgSale = $prevTotalSales > 0 ? $prevRevenue / $prevTotalSales : 0;
+
+        $dailyDeltas = [
+            'sales' => $prevTotalSales > 0 ? round((($totalSales - $prevTotalSales) / $prevTotalSales) * 100, 1) : null,
+            'revenue' => $prevRevenue > 0 ? round((($revenue - $prevRevenue) / $prevRevenue) * 100, 1) : null,
+            'items' => $prevItemsSold > 0 ? round((($itemsSold - $prevItemsSold) / $prevItemsSold) * 100, 1) : null,
+            'refunds' => $prevTotalRefunds > 0 ? round((($totalRefunds - $prevTotalRefunds) / $prevTotalRefunds) * 100, 1) : null,
+            'refund_val' => $prevRefundValue > 0 ? round((($refundValue - $prevRefundValue) / $prevRefundValue) * 100, 1) : null,
+            'avg_sale' => $prevAvgSale > 0 ? round((($avgSale - $prevAvgSale) / $prevAvgSale) * 100, 1) : null,
+        ];
 
         // Payment Breakdown (daily, net of refunds)
         $payments = $this->netPaymentsBetween($dayStart, $dayEnd);
 
-        // Hourly Trends (daily, net of refunds)
+        // Hourly Trends (daily, net of refunds + previous day overlay)
         $hourExpression = $this->hourExpression('created_at');
         $hourlyData = Sale::whereDate('created_at', $carbonDate)
+            ->select(DB::raw($hourExpression . ' as hour'), DB::raw('sum(total) as hourly_total'), DB::raw('count(*) as count'), DB::raw('sum((select sum(qty) from sale_items where sale_id = sales.id)) as items_count'))
+            ->groupBy('hour')
+            ->get()
+            ->keyBy('hour');
+        
+        $prevHourlyData = Sale::whereDate('created_at', $carbonDate->copy()->subDay())
             ->select(DB::raw($hourExpression . ' as hour'), DB::raw('sum(total) as hourly_total'))
             ->groupBy('hour')
             ->pluck('hourly_total', 'hour')
             ->toArray();
+
         $hourlyRefunds = $this->completedRefundsBetween($dayStart, $dayEnd)
             ->select(DB::raw($hourExpression . ' as hour'), DB::raw('sum(total_refunded) as hourly_total'))
             ->groupBy('hour')
@@ -61,12 +86,21 @@ class ReportsController extends Controller
             ->toArray();
 
         $hourlySales = [];
-        for ($i = 9; $i <= 21; $i++) {
-            $hourlySales[$i] = ($hourlyData[$i] ?? 0) - ($hourlyRefunds[$i] ?? 0);
+        $prevHourlySales = [];
+        $hourlyTransactions = [];
+        $hourlyItems = [];
+        for ($i = 8; $i <= 22; $i++) {
+            $hourNet = ($hourlyData[$i]->hourly_total ?? 0) - ($hourlyRefunds[$i] ?? 0);
+            $hourlySales[$i] = max(0, $hourNet);
+            $prevHourlySales[$i] = max(0, (float) ($prevHourlyData[$i] ?? 0));
+            $hourlyTransactions[$i] = (int) ($hourlyData[$i]->count ?? 0);
+            $hourlyItems[$i] = (int) ($hourlyData[$i]->items_count ?? 0);
         }
 
         // Top Products (daily, net of returns)
-        $topProducts = $this->netTopProductsBetween($dayStart, $dayEnd);
+        $topProducts = $this->netTopProductsBetween($dayStart, $dayEnd, 10);
+        $dailyStaffSales = $this->staffSalesBetween($dayStart, $dayEnd);
+        $dailyCategorySales = $this->categorySalesBetween($dayStart, $dayEnd);
 
         // ========================
         // 2. MONTHLY REPORT DATA
@@ -81,10 +115,31 @@ class ReportsController extends Controller
         $monthlyRefundStats = $this->refundStatsBetween($monthStart, $monthEnd);
         $monthlyTotalRefunds = $monthlyRefundStats['count'];
         $monthlyRefundValue = $monthlyRefundStats['value'];
+        $monthlyAvgSale = $monthlyTotalSales > 0 ? $monthlyRevenue / $monthlyTotalSales : 0;
 
         $daysInMonth = $carbonMonth->daysInMonth;
         $daysPassed = $carbonMonth->isCurrentMonth() ? Carbon::today()->day : $daysInMonth;
         $monthlyAvgDaily = $daysPassed > 0 ? $monthlyRevenue / $daysPassed : 0;
+
+        // Monthly comparison vs previous month
+        $prevMonthStart = $carbonMonth->copy()->subMonth()->startOfMonth();
+        $prevMonthEnd = $carbonMonth->copy()->subMonth()->endOfMonth();
+        $prevMonthlySales = Sale::whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])->count();
+        $prevMonthlyRevenue = $this->netRevenueBetween($prevMonthStart, $prevMonthEnd);
+        $prevMonthlyItemsSold = $this->netItemsSoldBetween($prevMonthStart, $prevMonthEnd);
+        $prevMonthlyRefundStats = $this->refundStatsBetween($prevMonthStart, $prevMonthEnd);
+        $prevMonthlyRefundValue = $prevMonthlyRefundStats['value'];
+        $prevMonthlyTotalRefunds = $prevMonthlyRefundStats['count'];
+        $prevMonthlyAvgSale = $prevMonthlySales > 0 ? $prevMonthlyRevenue / $prevMonthlySales : 0;
+
+        $monthlyDeltas = [
+            'sales' => $prevMonthlySales > 0 ? round((($monthlyTotalSales - $prevMonthlySales) / $prevMonthlySales) * 100, 1) : null,
+            'revenue' => $prevMonthlyRevenue > 0 ? round((($monthlyRevenue - $prevMonthlyRevenue) / $prevMonthlyRevenue) * 100, 1) : null,
+            'items' => $prevMonthlyItemsSold > 0 ? round((($monthlyItemsSold - $prevMonthlyItemsSold) / $prevMonthlyItemsSold) * 100, 1) : null,
+            'refunds' => $prevMonthlyTotalRefunds > 0 ? round((($monthlyTotalRefunds - $prevMonthlyTotalRefunds) / $prevMonthlyTotalRefunds) * 100, 1) : null,
+            'refund_val' => $prevMonthlyRefundValue > 0 ? round((($monthlyRefundValue - $prevMonthlyRefundValue) / $prevMonthlyRefundValue) * 100, 1) : null,
+            'avg_sale' => $prevMonthlyAvgSale > 0 ? round((($monthlyAvgSale - $prevMonthlyAvgSale) / $prevMonthlyAvgSale) * 100, 1) : null,
+        ];
 
         // Monthly Payment Breakdown (net of refunds)
         $monthlyPayments = $this->netPaymentsBetween($monthStart, $monthEnd);
@@ -100,8 +155,10 @@ class ReportsController extends Controller
             $monthlyChartData[] = $dailyInMonth[$dayDate] ?? 0;
         }
 
-        // Monthly Top Products (net of returns)
-        $monthlyTopProducts = $this->netTopProductsBetween($monthStart, $monthEnd);
+        // Monthly Top Products & Staff
+        $monthlyTopProducts = $this->netTopProductsBetween($monthStart, $monthEnd, 10);
+        $monthlyStaffSales = $this->staffSalesBetween($monthStart, $monthEnd);
+        $monthlyCategorySales = $this->categorySalesBetween($monthStart, $monthEnd);
 
         // Available months for dropdown
         $availableMonths = Sale::selectRaw($this->yearMonthExpression('created_at') . ' as ym')
@@ -126,9 +183,30 @@ class ReportsController extends Controller
         $customRefundStats = $this->refundStatsBetween($customStart, $customEnd);
         $customTotalRefunds = $customRefundStats['count'];
         $customRefundValue = $customRefundStats['value'];
+        $customAvgSale = $customTotalSales > 0 ? $customRevenue / $customTotalSales : 0;
 
         $customDays = $carbonFrom->diffInDays($carbonTo) + 1;
         $customAvgDaily = $customDays > 0 ? $customRevenue / $customDays : 0;
+
+        // Custom comparison vs previous equivalent range
+        $prevCustomStart = $carbonFrom->copy()->subDays($customDays)->startOfDay();
+        $prevCustomEnd = $carbonTo->copy()->subDays($customDays)->endOfDay();
+        $prevCustomSales = Sale::whereBetween('created_at', [$prevCustomStart, $prevCustomEnd])->count();
+        $prevCustomRevenue = $this->netRevenueBetween($prevCustomStart, $prevCustomEnd);
+        $prevCustomItemsSold = $this->netItemsSoldBetween($prevCustomStart, $prevCustomEnd);
+        $prevCustomRefundStats = $this->refundStatsBetween($prevCustomStart, $prevCustomEnd);
+        $prevCustomRefundValue = $prevCustomRefundStats['value'];
+        $prevCustomTotalRefunds = $prevCustomRefundStats['count'];
+        $prevCustomAvgSale = $prevCustomSales > 0 ? $prevCustomRevenue / $prevCustomSales : 0;
+
+        $customDeltas = [
+            'sales' => $prevCustomSales > 0 ? round((($customTotalSales - $prevCustomSales) / $prevCustomSales) * 100, 1) : null,
+            'revenue' => $prevCustomRevenue > 0 ? round((($customRevenue - $prevCustomRevenue) / $prevCustomRevenue) * 100, 1) : null,
+            'items' => $prevCustomItemsSold > 0 ? round((($customItemsSold - $prevCustomItemsSold) / $prevCustomItemsSold) * 100, 1) : null,
+            'refunds' => $prevCustomTotalRefunds > 0 ? round((($customTotalRefunds - $prevCustomTotalRefunds) / $prevCustomTotalRefunds) * 100, 1) : null,
+            'refund_val' => $prevCustomRefundValue > 0 ? round((($customRefundValue - $prevCustomRefundValue) / $prevCustomRefundValue) * 100, 1) : null,
+            'avg_sale' => $prevCustomAvgSale > 0 ? round((($customAvgSale - $prevCustomAvgSale) / $prevCustomAvgSale) * 100, 1) : null,
+        ];
 
         // Custom Payment Breakdown (net of refunds)
         $customPayments = $this->netPaymentsBetween($customStart, $customEnd);
@@ -145,8 +223,10 @@ class ReportsController extends Controller
             $cursor->addDay();
         }
 
-        // Custom Top Products (net of returns)
-        $customTopProducts = $this->netTopProductsBetween($customStart, $customEnd);
+        // Custom Top Products, Staff & Category
+        $customTopProducts = $this->netTopProductsBetween($customStart, $customEnd, 10);
+        $customStaffSales = $this->staffSalesBetween($customStart, $customEnd);
+        $customCategorySales = $this->categorySalesBetween($customStart, $customEnd);
 
         // ========================
         // 4. STOCK REPORT DATA
@@ -163,16 +243,18 @@ class ReportsController extends Controller
             'tab', 'date', 'month', 'dateFrom', 'dateTo',
             // Daily
             'totalSales', 'revenue', 'itemsSold', 'avgSale', 'totalRefunds', 'refundValue',
-            'payments', 'hourlySales', 'topProducts',
+            'dailyDeltas', 'payments', 'hourlySales', 'prevHourlySales', 'hourlyTransactions', 'hourlyItems',
+            'topProducts', 'dailyStaffSales', 'dailyCategorySales',
             // Monthly
-            'monthlyTotalSales', 'monthlyRevenue', 'monthlyItemsSold', 'monthlyAvgDaily',
-            'monthlyTotalRefunds', 'monthlyRefundValue',
+            'monthlyTotalSales', 'monthlyRevenue', 'monthlyItemsSold', 'monthlyAvgDaily', 'monthlyAvgSale',
+            'monthlyTotalRefunds', 'monthlyRefundValue', 'monthlyDeltas',
             'monthlyPayments', 'monthlyChartLabels', 'monthlyChartData', 'monthlyTopProducts',
-            'availableMonths',
+            'monthlyStaffSales', 'monthlyCategorySales', 'availableMonths',
             // Custom
-            'customTotalSales', 'customRevenue', 'customItemsSold', 'customAvgDaily',
-            'customTotalRefunds', 'customRefundValue',
+            'customTotalSales', 'customRevenue', 'customItemsSold', 'customAvgDaily', 'customAvgSale',
+            'customTotalRefunds', 'customRefundValue', 'customDeltas',
             'customPayments', 'customChartLabels', 'customChartData', 'customTopProducts',
+            'customStaffSales', 'customCategorySales',
             // Stock
             'stockProducts', 'stockTotalValue', 'stockAllTimeRevenue',
             'stockOutCount', 'stockLowCount', 'stockProductCount'
@@ -471,6 +553,38 @@ class ReportsController extends Controller
             ->sortByDesc('total_revenue')
             ->when($limit !== null, fn($rows) => $rows->take($limit))
             ->values();
+    }
+
+    private function staffSalesBetween(Carbon $start, Carbon $end)
+    {
+        return Sale::whereBetween('created_at', [$start, $end])
+            ->whereNotNull('user_id')
+            ->select('user_id', DB::raw('count(*) as transactions'), DB::raw('sum(total) as revenue'))
+            ->with('user')
+            ->groupBy('user_id')
+            ->orderByDesc('revenue')
+            ->get()
+            ->map(function ($s) {
+                return (object) [
+                    'user_id' => $s->user_id,
+                    'name' => $s->user?->name ?: ('Staff #' . $s->user_id),
+                    'transactions' => (int) $s->transactions,
+                    'revenue' => (float) $s->revenue,
+                    'avg_sale' => $s->transactions > 0 ? (float) ($s->revenue / $s->transactions) : 0.0,
+                ];
+            });
+    }
+
+    private function categorySalesBetween(Carbon $start, Carbon $end)
+    {
+        return SaleItem::whereHas('sale', fn($q) => $q->whereBetween('created_at', [$start, $end]))
+            ->join('products', 'products.id', '=', 'sale_items.product_id')
+            ->select('products.category', DB::raw('sum(sale_items.qty) as total_qty'), DB::raw('sum(sale_items.price * sale_items.qty) as total_revenue'))
+            ->whereNotNull('products.category')
+            ->where('products.category', '!=', '')
+            ->groupBy('products.category')
+            ->orderByDesc('total_revenue')
+            ->get();
     }
 
     // =====================================================================

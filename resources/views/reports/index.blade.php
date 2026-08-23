@@ -135,6 +135,30 @@
         ],
     };
 
+    // Preset matching for custom range
+    $todayStr = \Carbon\Carbon::today()->toDateString();
+    $yesterdayStr = \Carbon\Carbon::yesterday()->toDateString();
+    $last7Str = \Carbon\Carbon::today()->subDays(6)->toDateString();
+    $last30Str = \Carbon\Carbon::today()->subDays(29)->toDateString();
+    $thisMonthStart = \Carbon\Carbon::today()->startOfMonth()->toDateString();
+    $lastMonthStart = \Carbon\Carbon::today()->subMonth()->startOfMonth()->toDateString();
+    $lastMonthEnd = \Carbon\Carbon::today()->subMonth()->endOfMonth()->toDateString();
+
+    $activePreset = null;
+    if ($dateFrom === $todayStr && $dateTo === $todayStr) {
+        $activePreset = 'today';
+    } elseif ($dateFrom === $yesterdayStr && $dateTo === $yesterdayStr) {
+        $activePreset = 'yesterday';
+    } elseif ($dateFrom === $last7Str && $dateTo === $todayStr) {
+        $activePreset = 'last7';
+    } elseif ($dateFrom === $last30Str && $dateTo === $todayStr) {
+        $activePreset = 'last30';
+    } elseif ($dateFrom === $thisMonthStart && $dateTo === $todayStr) {
+        $activePreset = 'this_month';
+    } elseif ($dateFrom === $lastMonthStart && $dateTo === $lastMonthEnd) {
+        $activePreset = 'last_month';
+    }
+
     // Total non-zero payment count
     $nonZeroPayments = collect($activeMetrics['payments'])->filter(fn($amount) => abs($amount) > 0.01);
     $totalPaymentRevenue = $nonZeroPayments->sum(fn($v) => max(0, $v));
@@ -298,7 +322,7 @@
 
         <!-- Filter Form Adapting to Active Tab -->
         @if($currentTab !== 'stock')
-            <form method="GET" action="{{ route('reports.index') }}" class="w-full pt-1 border-t border-[#272C35]/50">
+            <form method="GET" action="{{ route('reports.index') }}" id="reportFilterForm" class="w-full pt-1 border-t border-[#272C35]/50">
                 <input type="hidden" name="tab" value="{{ $currentTab }}">
 
                 <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
@@ -308,6 +332,7 @@
                             <input type="date"
                                    name="date"
                                    value="{{ $date }}"
+                                   @change="$el.form.submit()"
                                    aria-label="Select Date"
                                    class="dashboard-control w-full h-[34px] px-3 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] [color-scheme:dark]">
                         </div>
@@ -315,6 +340,7 @@
                         <!-- Month Picker -->
                         <div class="flex-1 sm:max-w-xs relative">
                             <select name="month"
+                                    @change="$el.form.submit()"
                                     aria-label="Select Month"
                                     class="dashboard-control w-full h-[34px] px-3 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] cursor-pointer">
                                 @foreach($availableMonths as $availMonth)
@@ -346,14 +372,14 @@
                             </div>
                         </div>
 
-                        <!-- Quick Presets -->
+                        <!-- Quick Presets with active highlights & instant generation -->
                         <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar py-0.5">
-                            <button type="button" @click="applyPreset('today')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Today</button>
-                            <button type="button" @click="applyPreset('yesterday')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Yesterday</button>
-                            <button type="button" @click="applyPreset('last7')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Last 7d</button>
-                            <button type="button" @click="applyPreset('last30')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Last 30d</button>
-                            <button type="button" @click="applyPreset('this_month')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">This Month</button>
-                            <button type="button" @click="applyPreset('last_month')" class="px-2 py-1 rounded bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] text-[10px] font-semibold cursor-pointer">Last Month</button>
+                            <button type="button" @click="applyPreset('today')" class="px-2.5 py-1 rounded border text-[10px] font-bold cursor-pointer transition-colors {{ $activePreset === 'today' ? 'bg-amber-500/20 text-amber-accent border-amber-accent/50' : 'bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border-[#272C35]' }}">Today</button>
+                            <button type="button" @click="applyPreset('yesterday')" class="px-2.5 py-1 rounded border text-[10px] font-bold cursor-pointer transition-colors {{ $activePreset === 'yesterday' ? 'bg-amber-500/20 text-amber-accent border-amber-accent/50' : 'bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border-[#272C35]' }}">Yesterday</button>
+                            <button type="button" @click="applyPreset('last7')" class="px-2.5 py-1 rounded border text-[10px] font-bold cursor-pointer transition-colors {{ $activePreset === 'last7' ? 'bg-amber-500/20 text-amber-accent border-amber-accent/50' : 'bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border-[#272C35]' }}">Last 7d</button>
+                            <button type="button" @click="applyPreset('last30')" class="px-2.5 py-1 rounded border text-[10px] font-bold cursor-pointer transition-colors {{ $activePreset === 'last30' ? 'bg-amber-500/20 text-amber-accent border-amber-accent/50' : 'bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border-[#272C35]' }}">Last 30d</button>
+                            <button type="button" @click="applyPreset('this_month')" class="px-2.5 py-1 rounded border text-[10px] font-bold cursor-pointer transition-colors {{ $activePreset === 'this_month' ? 'bg-amber-500/20 text-amber-accent border-amber-accent/50' : 'bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border-[#272C35]' }}">This Month</button>
+                            <button type="button" @click="applyPreset('last_month')" class="px-2.5 py-1 rounded border text-[10px] font-bold cursor-pointer transition-colors {{ $activePreset === 'last_month' ? 'bg-amber-500/20 text-amber-accent border-amber-accent/50' : 'bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border-[#272C35]' }}">Last Month</button>
                         </div>
                     @endif
 
@@ -905,35 +931,52 @@ function reportsApp(config) {
         },
 
         applyPreset(preset) {
-            const today = new Date();
-            const formatDate = (d) => d.toISOString().split('T')[0];
+            const formatLocalDate = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
 
+            const today = new Date();
             let from = new Date(today);
             let to = new Date(today);
 
             if (preset === 'today') {
-                // from = to = today
+                from = new Date(today);
+                to = new Date(today);
             } else if (preset === 'yesterday') {
                 from.setDate(today.getDate() - 1);
                 to.setDate(today.getDate() - 1);
             } else if (preset === 'last7') {
                 from.setDate(today.getDate() - 6);
+                to = new Date(today);
             } else if (preset === 'last30') {
                 from.setDate(today.getDate() - 29);
+                to = new Date(today);
             } else if (preset === 'this_month') {
                 from = new Date(today.getFullYear(), today.getMonth(), 1);
+                to = new Date(today);
             } else if (preset === 'last_month') {
                 from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 to = new Date(today.getFullYear(), today.getMonth(), 0);
             }
 
-            const fromStr = formatDate(from);
-            const toStr = formatDate(to);
+            const fromStr = formatLocalDate(from);
+            const toStr = formatLocalDate(to);
 
-            document.getElementById('customDateFrom').value = fromStr;
-            document.getElementById('customDateTo').value = toStr;
+            const fromInput = document.getElementById('customDateFrom');
+            const toInput = document.getElementById('customDateTo');
+            if (fromInput) fromInput.value = fromStr;
+            if (toInput) toInput.value = toStr;
             this.dateFrom = fromStr;
             this.dateTo = toStr;
+
+            // Submit the form immediately for 1-click report generation
+            const form = document.getElementById('reportFilterForm');
+            if (form) {
+                form.submit();
+            }
         },
 
         syncShopify() {

@@ -28,6 +28,14 @@ class ReportsController extends Controller
         $carbonFrom = Carbon::parse($dateFrom);
         $carbonTo = Carbon::parse($dateTo);
 
+        if ($carbonFrom->gt($carbonTo)) {
+            $temp = $carbonFrom;
+            $carbonFrom = $carbonTo;
+            $carbonTo = $temp;
+            $dateFrom = $carbonFrom->toDateString();
+            $dateTo = $carbonTo->toDateString();
+        }
+
         // =====================
         // 1. DAILY REPORT DATA
         // =====================

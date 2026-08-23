@@ -110,7 +110,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Products — view all; local-only products can be added/edited/deleted here.
     // Shopify-synced products are read-only (managed via Shopify Sync).
     Route::get('/products', function (\Illuminate\Http\Request $request) {
-        $query = \App\Models\Product::with('variants')->orderBy('name');
+        $query = \App\Models\Product::with('variants');
 
         // Source tab filter
         if ($request->source === 'shopify') {
@@ -121,11 +121,16 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Text search
         if ($request->filled('search')) {
-            $s = $request->search;
+            $s = trim($request->search);
             $query->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
                   ->orWhere('sku',  'like', "%{$s}%");
             });
+        }
+
+        // Category filter
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
         }
 
         // Stock status filter
@@ -137,16 +142,61 @@ Route::middleware(['auth', 'active'])->group(function () {
             $query->where('stock', '<=', 0);
         }
 
-        $products = $query->paginate(15)->withQueryString();
+        // Sorting
+        $sort = $request->get('sort', 'name_asc');
+        switch ($sort) {
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'stock_asc':
+                $query->orderBy('stock', 'asc');
+                break;
+            case 'stock_desc':
+                $query->orderBy('stock', 'desc');
+                break;
+            case 'updated':
+                $query->orderBy('updated_at', 'desc');
+                break;
+            case 'name_asc':
+            default:
+                $query->orderBy('name', 'asc');
+                break;
+        }
 
-        // Tab counts (always from full DB, unaffected by current filters)
-        $totalCount   = \App\Models\Product::count();
+        $products = $query->paginate(20)->withQueryString();
+
+        // KPI metrics from entire database
+        $totalProducts   = \App\Models\Product::count();
+        $stockValue      = (float) (\App\Models\Product::selectRaw('SUM(price * stock) as total_val')->value('total_val') ?? 0.0);
+        $lowStockCount   = \App\Models\Product::where('stock', '>', 0)->where('stock', '<=', 5)->count();
+        $outOfStockCount = \App\Models\Product::where('stock', '<=', 0)->count();
+
+        // Tab counts (always from full DB)
+        $totalCount   = $totalProducts;
         $shopifyCount = \App\Models\Product::whereNotNull('shopify_id')->count();
         $localCount   = \App\Models\Product::whereNull('shopify_id')->count();
 
-        $settings = \App\Models\Setting::getAllSettings();
+        $categories = \App\Models\Product::whereNotNull('category')->where('category', '!=', '')->distinct()->orderBy('category')->pluck('category');
+        $settings   = \App\Models\Setting::getAllSettings();
 
-        return view('products.index', compact('products', 'totalCount', 'shopifyCount', 'localCount', 'settings'));
+        return view('products.index', compact(
+            'products',
+            'totalCount',
+            'shopifyCount',
+            'localCount',
+            'totalProducts',
+            'stockValue',
+            'lowStockCount',
+            'outOfStockCount',
+            'categories',
+            'settings'
+        ));
     })->middleware('permission:products')->name('products.index');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');

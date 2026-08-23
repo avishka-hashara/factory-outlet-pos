@@ -1,1666 +1,1127 @@
 {{-- ============================================
-Products Page - Jewellery POS System
-Shopify products (read-only) + Local in-store products (full CRUD)
-============================================ --}}
+     Products Page - Redesigned Dark Dashboard Experience
+     Jewellery / Clothing Outlet POS
+     ============================================ --}}
 @extends('layouts.pos')
 @section('title', 'Products')
 
+@push('styles')
+<style>
+    :root {
+        --dash-card-bg: #171A20;
+        --dash-card-hover-bg: #1E222A;
+        --dash-card-border: #272C35;
+        --dash-card-border-width: 1px;
+        --dash-card-radius: 8px;
+        --dash-control-radius: 6px;
+    }
+
+    .dashboard-card {
+        background-color: var(--dash-card-bg) !important;
+        border: var(--dash-card-border-width) solid var(--dash-card-border) !important;
+        border-radius: var(--dash-card-radius) !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .dashboard-card:hover {
+        background-color: var(--dash-card-hover-bg) !important;
+    }
+
+    .dashboard-control {
+        background-color: #111419 !important;
+        border: var(--dash-card-border-width) solid var(--dash-card-border) !important;
+        border-radius: var(--dash-control-radius) !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        outline: none !important;
+        color: #F5F5F5 !important;
+    }
+
+    .dashboard-control:hover {
+        background-color: var(--dash-card-hover-bg) !important;
+    }
+
+    .dashboard-control:focus {
+        border-color: #F5A623 !important;
+        box-shadow: 0 0 0 1px #F5A623 !important;
+    }
+
+    /* Custom dark scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #111419;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #272C35;
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #3E444D;
+    }
+</style>
+@endpush
+
+@section('main-class', 'p-3.5 lg:p-4 pb-8 overflow-y-auto custom-scrollbar')
+
+@php
+    $isFiltered = request()->filled('search') || request()->filled('category') || request()->filled('stock') || (request()->filled('source') && request('source') !== 'all');
+
+    // Build JSON payload for Alpine.js
+    $productsPayload = $products->map(function ($p) {
+        $displayStock = $p->hasVariants() ? $p->total_stock : $p->stock;
+        $variantsMapped = $p->variants->map(function ($v) {
+            $label = collect([$v->color, $v->size])->filter()->implode(' / ') ?: 'Standard';
+            return [
+                'id' => $v->id,
+                'color' => $v->color,
+                'color_code' => $v->color_code,
+                'size' => $v->size,
+                'sku' => $v->sku,
+                'price' => $v->price ? (float)$v->price : null,
+                'stock' => (int)$v->stock,
+                'label' => $label,
+            ];
+        });
+
+        return [
+            'id' => $p->id,
+            'name' => $p->name,
+            'sku' => $p->sku,
+            'category' => $p->category,
+            'subcategory' => $p->subcategory,
+            'price' => (float)$p->price,
+            'price_formatted' => 'Rs. ' . number_format((float)$p->price, 2),
+            'stock' => (int)$displayStock,
+            'reorder_point' => 5,
+            'image_url' => $p->image_url,
+            'is_shopify' => !empty($p->shopify_id),
+            'shopify_id' => $p->shopify_id,
+            'variants_count' => $p->variants->count(),
+            'variants' => $variantsMapped,
+            'delete_url' => route('products.destroy', $p->id),
+        ];
+    });
+@endphp
+
 @section('content')
-    <!-- Page Header -->
-    <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
-        <div>
-            <h4><i class="fas fa-tshirt me-2 text-gold"></i> Products</h4>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                    <li class="breadcrumb-item active">Products</li>
-                </ol>
-            </nav>
+<div x-data="productsCatalogApp({
+        initialProducts: @js($productsPayload),
+        sourceTab: '{{ request('source', 'all') }}',
+        totalProductsCount: {{ $totalProducts }}
+     })"
+     class="w-full flex flex-col select-none gap-3.5 box-border">
+
+    <!-- ========================================================
+         1. PAGE HEADER
+         ======================================================== -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+        <!-- Title & Subtitle -->
+        <div class="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
+            <div class="flex items-center gap-2.5">
+                <h1 class="font-headline-lg text-[20px] lg:text-[22px] text-on-surface m-0 font-bold tracking-tight">
+                    Products
+                </h1>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-accent border border-amber-500/25">
+                    <span class="material-symbols-outlined text-[13px] text-amber-accent">inventory_2</span>
+                    Inventory
+                </span>
+            </div>
+            <p class="font-body-sm text-[12px] text-on-surface-variant m-0">
+                Catalog and stock levels
+            </p>
         </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
-            <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                <i class="fas fa-plus me-1"></i> Add Local Product
+
+        <!-- Right Side Actions: Add Product (Solid Amber) + Overflow ⋯ -->
+        <div class="flex items-center gap-2">
+            <!-- Add Product Button (Primary Solid Amber) -->
+            <button type="button"
+                    @click="openAddProductModal()"
+                    class="h-[34px] px-3.5 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-0 active:scale-95 shadow-md">
+                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'wght' 700;">add</span>
+                <span>Add Product</span>
             </button>
+
+            <!-- Overflow ⋯ Header Menu -->
+            <div class="relative" x-data="{ headerMenuOpen: false }">
+                <button type="button"
+                        @click="headerMenuOpen = !headerMenuOpen"
+                        class="dashboard-control h-[34px] w-[34px] rounded-[6px] flex items-center justify-center text-[#8A8A93] hover:text-white cursor-pointer"
+                        title="More Catalog Actions">
+                    <span class="material-symbols-outlined text-[18px]">more_horiz</span>
+                </button>
+
+                <div x-show="headerMenuOpen"
+                     @click.outside="headerMenuOpen = false"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     class="absolute right-0 top-full mt-1.5 w-44 rounded-[6px] bg-[#13151A] border border-white/10 shadow-2xl py-1 z-50 text-[11px]"
+                     style="display: none;">
+                    <button type="button"
+                            @click="headerMenuOpen = false; exportCatalogCsv()"
+                            class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">download</span>
+                        <span>Export Catalog (CSV)</span>
+                    </button>
+                    <a href="{{ route('dashboard') }}"
+                       class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left no-underline cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">sync</span>
+                        <span>Sync with Shopify</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
-    {{-- Flash Messages --}}
+    <!-- Flash Messages -->
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="p-3 rounded-[6px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[12px] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                <span>{{ session('success') }}</span>
+            </div>
+            <button type="button" @click="$el.parentElement.remove()" class="text-emerald-400 hover:text-white bg-transparent border-0 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">close</span>
+            </button>
         </div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="p-3 rounded-[6px] bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[12px] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">error</span>
+                <span>{{ session('error') }}</span>
+            </div>
+            <button type="button" @click="$el.parentElement.remove()" class="text-rose-400 hover:text-white bg-transparent border-0 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">close</span>
+            </button>
         </div>
     @endif
 
-    <!-- Source Tabs -->
-    <ul class="nav nav-pills mb-3" id="sourceTab">
-        <li class="nav-item">
-            <a class="nav-link {{ request('source', 'all') === 'all' ? 'active' : '' }}"
-               href="{{ route('products.index', array_merge(request()->except(['source','page']), ['source'=>'all'])) }}">
-                All Products <span class="badge bg-secondary ms-1">{{ $totalCount }}</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {{ request('source') === 'shopify' ? 'active' : '' }}"
-               href="{{ route('products.index', array_merge(request()->except(['source','page']), ['source'=>'shopify'])) }}">
-                <i class="fab fa-shopify me-1"></i> Shopify
-                <span class="badge bg-info ms-1">{{ $shopifyCount }}</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {{ request('source') === 'local' ? 'active' : '' }}"
-               href="{{ route('products.index', array_merge(request()->except(['source','page']), ['source'=>'local'])) }}">
-                <i class="fas fa-store me-1"></i> Local (In-Store)
-                <span class="badge bg-warning text-dark ms-1">{{ $localCount }}</span>
-            </a>
-        </li>
-    </ul>
+    <!-- ========================================================
+         2. KPI ROW (4 STAT CARDS)
+         ======================================================== -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3.5 shrink-0">
+        <!-- 1. Total Products -->
+        <x-pos.kpi-card
+            title="Total Products"
+            icon="inventory_2"
+            :value="number_format($totalProducts)"
+            :is-primary="true"
+            subtext="Catalog Items"
+        />
 
-    <!-- Filters Row -->
-    <form method="GET" action="{{ route('products.index') }}" id="filterForm">
-        <input type="hidden" name="source" value="{{ request('source', 'all') }}">
-        <div class="pos-card card mb-4">
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-md-5">
-                        <label class="form-label small fw-semibold">Search</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="fas fa-search text-gold"></i></span>
-                            <input type="text" name="search" class="form-control"
-                                placeholder="Search by name or SKU..."
-                                value="{{ request('search') }}">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Stock Status</label>
-                        <select name="stock" class="form-select">
-                            <option value="">All</option>
-                            <option value="instock" {{ request('stock') === 'instock' ? 'selected' : '' }}>In Stock</option>
-                            <option value="low"     {{ request('stock') === 'low'     ? 'selected' : '' }}>Low Stock (&le;5)</option>
-                            <option value="out"     {{ request('stock') === 'out'     ? 'selected' : '' }}>Out of Stock</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-dark-blue w-100">
-                            <i class="fas fa-filter me-1"></i> Filter
-                        </button>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{{ route('products.index') }}" class="btn btn-outline-secondary w-100">
-                            <i class="fas fa-undo me-1"></i> Reset
-                        </a>
-                    </div>
+        <!-- 2. Stock Value -->
+        <x-pos.kpi-card
+            title="Stock Value"
+            icon="payments"
+            :value="'Rs. ' . number_format($stockValue, 2)"
+            subtext="Inventory Retail Worth"
+        />
+
+        <!-- 3. Low Stock (Clickable Filter Card) -->
+        <a href="{{ route('products.index', ['stock' => 'low']) }}"
+           class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 no-underline cursor-pointer">
+            <div>
+                <div class="flex items-center justify-between gap-1 mb-1.5">
+                    <span class="text-[10px] lg:text-[11px] font-bold text-amber-400 uppercase tracking-[0.08em] truncate">
+                        Low Stock
+                    </span>
+                    <span class="material-symbols-outlined text-[18px] text-amber-400 shrink-0">warning</span>
+                </div>
+                <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-amber-400 tracking-tight tabular-nums">
+                    {{ number_format($lowStockCount) }}
                 </div>
             </div>
-        </div>
-    </form>
-
-    <!-- Products Table -->
-    <div class="pos-card card">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table pos-table mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width:50px;">#</th>
-                            <th style="width:60px;">Image</th>
-                            <th>Product Name</th>
-                            <th>SKU</th>
-                            <th>Category</th>
-                            <th>Price</th>
-                            <th>Stock</th>
-                            <th>Source</th>
-                            <th>Status</th>
-                            <th style="width:110px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($products as $p)
-                            <tr data-source="{{ $p->shopify_id ? 'shopify' : 'local' }}"
-                                data-stock="{{ $p->stock <= 0 ? 'out' : ($p->stock <= 5 ? 'low' : 'instock') }}"
-                                data-product-id="{{ $p->id }}">
-                                <td>{{ $p->id }}</td>
-                                <td id="ptd-img-{{ $p->id }}">
-                                    @if($p->image_url)
-                                        <img src="{{ $p->image_url }}" alt="{{ $p->name }}" class="rounded"
-                                            style="width:40px;height:40px;object-fit:cover;">
-                                    @else
-                                        <div class="d-flex align-items-center justify-content-center rounded"
-                                            style="width:40px;height:40px;background:var(--light-grey);">
-                                            <i class="fas fa-tshirt text-gold"></i>
-                                        </div>
-                                    @endif
-                                </td>
-                                <td id="ptd-name-{{ $p->id }}">
-                                    <strong id="ptd-nametxt-{{ $p->id }}">{{ $p->name }}</strong>
-                                    <div id="ptd-vdots-{{ $p->id }}" class="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                                        @foreach($p->variants->take(6) as $v)
-                                            @php $vtitle = collect([$v->color, $v->size])->filter()->implode(' / '); @endphp
-                                            @if($v->color_code)
-                                                <span title="{{ $vtitle }} ({{ $v->stock }})"
-                                                    style="width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid #ccc;background:{{ $v->color_code }};"></span>
-                                            @elseif($v->size)
-                                                <span class="badge bg-secondary" title="{{ $vtitle }} ({{ $v->stock }})" style="font-size:0.6rem;padding:2px 4px;">{{ $v->size }}</span>
-                                            @else
-                                                <span title="{{ $vtitle }} ({{ $v->stock }})"
-                                                    style="width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid #ccc;background:#ccc;"></span>
-                                            @endif
-                                        @endforeach
-                                        @if($p->variants->count() > 6)
-                                            <small class="text-muted">+{{ $p->variants->count() - 6 }}</small>
-                                        @endif
-                                        @if($p->variants->count() > 0)
-                                            <small class="text-muted ms-1">({{ $p->variants->count() }} variants)</small>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td><code id="ptd-sku-{{ $p->id }}">{{ $p->sku }}</code></td>
-                                <td id="ptd-cat-{{ $p->id }}">
-                                    <span class="badge bg-light text-dark border">{{ $p->category ?? '—' }}</span>
-                                    @if($p->subcategory)
-                                        <br><span class="badge bg-secondary bg-opacity-25 text-secondary border mt-1" style="font-size:0.7rem;">
-                                            <i class="fas fa-angle-right me-1"></i>{{ $p->subcategory }}</span>
-                                    @endif
-                                </td>
-                                <td class="fw-bold" id="ptd-price-{{ $p->id }}">Rs. {{ number_format($p->price, 2) }}</td>
-                                <td id="ptd-stock-{{ $p->id }}">
-                                    @php $displayStock = $p->hasVariants() ? $p->total_stock : $p->stock; @endphp
-                                    @if($displayStock > 5)
-                                        <span class="fw-semibold text-success">{{ $displayStock }}</span>
-                                    @elseif($displayStock > 0)
-                                        <span class="fw-semibold text-warning">{{ $displayStock }}</span>
-                                    @else
-                                        <span class="fw-semibold text-danger">0</span>
-                                    @endif
-                                    @if($p->hasVariants())
-                                        <br><small class="text-muted">across {{ $p->variants->count() }} variants</small>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($p->shopify_id)
-                                        <span class="badge bg-info text-white" title="Synced from Shopify">
-                                            <i class="fab fa-shopify me-1"></i> Shopify
-                                        </span>
-                                    @else
-                                        <span class="badge bg-warning text-dark" title="Local in-store product">
-                                            <i class="fas fa-store me-1"></i> Local
-                                        </span>
-                                    @endif
-                                </td>
-                                <td id="ptd-status-{{ $p->id }}">
-                                    @if($p->stock > 0)
-                                        <span class="badge bg-success">Active</span>
-                                    @else
-                                        <span class="badge bg-danger">Out of Stock</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info me-1" title="Manage Variants"
-                                        onclick="openVariantsModal({{ $p->id }}, '{{ addslashes($p->name) }}', {{ $p->shopify_id ? 'true' : 'false' }})">
-                                        <i class="fas fa-palette"></i>
-                                    </button>
-                                    @if(!$p->shopify_id)
-                                        <button class="btn btn-sm btn-outline-warning me-1" title="Print Barcode"
-                                            onclick="openBarcodeModal({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->sku) }}', '{{ $p->price }}')"><i class="fas fa-barcode"></i></button>
-                                        <button class="btn btn-sm btn-outline-primary me-1" title="Edit"
-                                            id="ptd-editbtn-{{ $p->id }}"
-                                            onclick="openEdit({{ $p->id }}, '{{ addslashes($p->name) }}', '{{ addslashes($p->sku) }}', '{{ addslashes($p->category ?? '') }}', '{{ addslashes($p->subcategory ?? '') }}', '{{ $p->price }}', '{{ $p->stock }}', '{{ addslashes($p->image_url ?? '') }}')"><i class="fas fa-edit"></i></button>
-                                        <form method="POST" action="{{ route('products.destroy', $p) }}" class="delete-product-form d-inline"
-                                            data-product-id="{{ $p->id }}" data-product-name="{{ addslashes($p->name) }}">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
-                                        </form>
-                                    @else
-                                        <span class="text-muted" title="Managed in Shopify"><i class="fas fa-lock"></i></span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="10" class="text-center text-muted p-5">
-                                    <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
-                                    No products found. Sync with Shopify or add a local product.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-2">
+                <span>&le; 5 units remaining &rarr;</span>
             </div>
+        </a>
 
-            <!-- Pagination -->
-            <div class="d-flex justify-content-between align-items-center p-3">
-                <small class="text-muted">Showing {{ $products->firstItem() ?? 0 }}&ndash;{{ $products->lastItem() ?? 0 }}
-                    of {{ $products->total() }} products</small>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
-                        {{-- Previous --}}
-                        @if ($products->onFirstPage())
-                            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
-                        @else
-                            <li class="page-item"><a class="page-link" href="{{ $products->previousPageUrl() }}">&laquo;</a>
-                            </li>
-                        @endif
+        <!-- 4. Out of Stock (Clickable Filter Card) -->
+        <a href="{{ route('products.index', ['stock' => 'out']) }}"
+           class="dashboard-card relative p-3 lg:p-3.5 flex flex-col justify-between overflow-hidden group transition-all duration-200 no-underline cursor-pointer">
+            <div>
+                <div class="flex items-center justify-between gap-1 mb-1.5">
+                    <span class="text-[10px] lg:text-[11px] font-bold text-rose-400 uppercase tracking-[0.08em] truncate">
+                        Out of Stock
+                    </span>
+                    <span class="material-symbols-outlined text-[18px] text-rose-400 shrink-0">block</span>
+                </div>
+                <div class="font-['Inter'] font-bold text-[18px] lg:text-[20px] text-rose-400 tracking-tight tabular-nums">
+                    {{ number_format($outOfStockCount) }}
+                </div>
+            </div>
+            <div class="text-[10px] text-[#8A8A93] font-medium tracking-wide flex items-center gap-1 mt-2">
+                <span>0 units available &rarr;</span>
+            </div>
+        </a>
+    </div>
 
-                        {{-- Page Numbers --}}
-                        @foreach ($products->getUrlRange(1, $products->lastPage()) as $page => $url)
-                            @if ($page == $products->currentPage())
-                                <li class="page-item active"><span class="page-link">{{ $page }}</span></li>
-                            @else
-                                <li class="page-item"><a class="page-link" href="{{ $url }}">{{ $page }}</a></li>
-                            @endif
+    <!-- ========================================================
+         3. TABS & FILTER BAR CARD
+         ======================================================== -->
+    <div class="dashboard-card rounded-[8px] p-2.5 lg:p-3 bg-[#171A20] border border-[#272C35] flex flex-col gap-2.5">
+        <!-- Filter Form -->
+        <form method="GET" action="{{ route('products.index') }}" id="productsFilterForm" class="w-full">
+            <input type="hidden" name="source" id="productSourceInput" value="{{ request('source', 'all') }}">
+
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+                <!-- Search Input -->
+                <div class="relative flex-1 min-w-[200px]">
+                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[#8A8A93]">search</span>
+                    <input type="text"
+                           name="search"
+                           value="{{ request('search') }}"
+                           x-model="searchQuery"
+                           placeholder="Search product name or SKU..."
+                           class="dashboard-control w-full h-[34px] pl-8 pr-3 text-[11px] text-white placeholder-[#8A8A93] bg-[#111419] rounded-[6px] border border-[#272C35] focus:border-[#F5A623] outline-none">
+                </div>
+
+                <!-- Category Select -->
+                <div class="w-full lg:w-[150px]">
+                    <select name="category"
+                            aria-label="Category"
+                            class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] cursor-pointer">
+                        <option value="">All Categories</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
                         @endforeach
+                    </select>
+                </div>
 
-                        {{-- Next --}}
-                        @if ($products->hasMorePages())
-                            <li class="page-item"><a class="page-link" href="{{ $products->nextPageUrl() }}">&raquo;</a></li>
-                        @else
-                            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
-                        @endif
-                    </ul>
-                </nav>
+                <!-- Stock Status Select -->
+                <div class="w-full lg:w-[140px]">
+                    <select name="stock"
+                            aria-label="Stock Status"
+                            class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] cursor-pointer">
+                        <option value="">All Stock</option>
+                        <option value="instock" {{ request('stock') === 'instock' ? 'selected' : '' }}>In Stock (>5)</option>
+                        <option value="low"     {{ request('stock') === 'low'     ? 'selected' : '' }}>Low Stock (&le;5)</option>
+                        <option value="out"     {{ request('stock') === 'out'     ? 'selected' : '' }}>Out of Stock (0)</option>
+                    </select>
+                </div>
+
+                <!-- Sort Control -->
+                <div class="w-full lg:w-[140px]">
+                    <select name="sort"
+                            aria-label="Sort by"
+                            class="dashboard-control w-full h-[34px] px-2.5 text-[11px] text-white bg-[#111419] rounded-[6px] border border-[#272C35] cursor-pointer">
+                        <option value="name_asc"   {{ request('sort', 'name_asc') === 'name_asc' ? 'selected' : '' }}>Name (A-Z)</option>
+                        <option value="name_desc"  {{ request('sort') === 'name_desc'  ? 'selected' : '' }}>Name (Z-A)</option>
+                        <option value="price_asc"  {{ request('sort') === 'price_asc'  ? 'selected' : '' }}>Price: Low to High</option>
+                        <option value="price_desc" {{ request('sort') === 'price_desc' ? 'selected' : '' }}>Price: High to Low</option>
+                        <option value="stock_desc" {{ request('sort') === 'stock_desc' ? 'selected' : '' }}>Stock: Highest</option>
+                        <option value="stock_asc"  {{ request('sort') === 'stock_asc'  ? 'selected' : '' }}>Stock: Lowest</option>
+                        <option value="updated"    {{ request('sort') === 'updated'    ? 'selected' : '' }}>Recently Updated</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="submit"
+                            class="h-[34px] px-3.5 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-0 active:scale-95">
+                        <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'wght' 700;">filter_alt</span>
+                        <span>Filter</span>
+                    </button>
+                    <a href="{{ route('products.index') }}"
+                       class="dashboard-control h-[34px] w-[34px] text-[#8A8A93] hover:text-[#EF4444] rounded-[6px] flex items-center justify-center transition-colors no-underline"
+                       title="Reset filters">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                    </a>
+                </div>
             </div>
+        </form>
+
+        <!-- Source Tabs (All / Shopify / Local) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pt-1 border-t border-[#272C35]/50 select-none">
+            <!-- All Products -->
+            <a href="{{ route('products.index', array_merge(request()->except(['source','page']), ['source'=>'all'])) }}"
+               class="px-2.5 py-1 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ request('source', 'all') === 'all' ? 'bg-[#1E222A] text-amber-accent border-amber-accent/40 font-bold' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span>All Products</span>
+                <span class="px-1.5 py-0.2 rounded bg-black/40 text-[10px] tabular-nums text-white">{{ $totalCount }}</span>
+            </a>
+
+            <!-- Shopify Synced -->
+            <a href="{{ route('products.index', array_merge(request()->except(['source','page']), ['source'=>'shopify'])) }}"
+               class="px-2.5 py-1 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ request('source') === 'shopify' ? 'bg-sky-500/10 text-sky-400 border-sky-500/40 font-bold' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span class="material-symbols-outlined text-[14px]">cloud_sync</span>
+                <span>Shopify</span>
+                <span class="px-1.5 py-0.2 rounded bg-black/40 text-[10px] tabular-nums text-sky-400">{{ $shopifyCount }}</span>
+            </a>
+
+            <!-- Local In-Store -->
+            <a href="{{ route('products.index', array_merge(request()->except(['source','page']), ['source'=>'local'])) }}"
+               class="px-2.5 py-1 rounded-[6px] border text-[11px] flex items-center gap-1.5 transition-colors no-underline whitespace-nowrap {{ request('source') === 'local' ? 'bg-amber-500/10 text-amber-400 border-amber-500/40 font-bold' : 'bg-[#111419] text-[#d7c3ae] border-[#272C35] font-semibold hover:text-white' }}">
+                <span class="material-symbols-outlined text-[14px]">store</span>
+                <span>Local (In-Store)</span>
+                <span class="px-1.5 py-0.2 rounded bg-black/40 text-[10px] tabular-nums text-amber-400">{{ $localCount }}</span>
+            </a>
         </div>
     </div>
 
-    {{-- ===== ADD Local Product Modal ===== --}}
-    <div class="modal fade" id="addProductModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data" id="addProductForm">
-                    @csrf
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-store me-2 text-warning"></i> Add Local In-Store Product
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-muted small mb-3">
-                            <i class="fas fa-info-circle me-1"></i>
-                            This product will be stored <strong>only on this server</strong> and will
-                            <strong>not</strong> be added to your Shopify store.
-                        </p>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
-                                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                                    placeholder="e.g. Classic Cotton Crewneck Tee" value="{{ old('name') }}" required>
-                                @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">SKU <span class="text-danger">*</span></label>
-                                <input type="text" name="sku" class="form-control @error('sku') is-invalid @enderror"
-                                    placeholder="e.g. TSH-BLK-M" value="{{ old('sku') }}" required>
-                                @error('sku') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
-                                <input type="text" name="category" class="form-control @error('category') is-invalid @enderror"
-                                    placeholder="e.g. Men, Women, Kids, Unisex..." value="{{ old('category') }}" list="categoryList" required>
-                                <datalist id="categoryList">
-                                    <option value="Men">
-                                    <option value="Women">
-                                    <option value="Kids">
-                                    <option value="Unisex">
-                                    <option value="Tops">
-                                    <option value="Bottoms">
-                                    <option value="Outerwear">
-                                    <option value="Accessories">
-                                    @foreach(\App\Models\Product::whereNotNull('category')->distinct()->pluck('category') as $_c)
-                                        @if(!in_array($_c, ['Men', 'Women', 'Kids', 'Unisex', 'Tops', 'Bottoms', 'Outerwear', 'Accessories']))
-                                            <option value="{{ $_c }}">
-                                        @endif
-                                    @endforeach
-                                </datalist>
-                                @error('category') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Sub-Category</label>
-                                <input type="text" name="subcategory" class="form-control @error('subcategory') is-invalid @enderror"
-                                    placeholder="e.g. T-Shirts, Shirts, Jeans, Dresses..." value="{{ old('subcategory') }}" list="subcategoryList">
-                                <datalist id="subcategoryList">
-                                    <option value="T-Shirts">
-                                    <option value="Casual Shirts">
-                                    <option value="Formal Shirts">
-                                    <option value="Jeans">
-                                    <option value="Trousers">
-                                    <option value="Shorts">
-                                    <option value="Dresses">
-                                    <option value="Hoodies &amp; Sweatshirts">
-                                    <option value="Jackets">
-                                    <option value="Activewear">
-                                    @foreach(\App\Models\Product::whereNotNull('subcategory')->distinct()->pluck('subcategory') as $_s)
-                                        @if(!in_array($_s, ['T-Shirts', 'Casual Shirts', 'Formal Shirts', 'Jeans', 'Trousers', 'Shorts', 'Dresses', 'Hoodies & Sweatshirts', 'Jackets', 'Activewear']))
-                                            <option value="{{ $_s }}">
-                                        @endif
-                                    @endforeach
-                                </datalist>
-                                <div class="form-text">Optional — groups products under a main category.</div>
-                                @error('subcategory') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Price (Rs.) <span class="text-danger">*</span></label>
-                                <input type="number" name="price" class="form-control @error('price') is-invalid @enderror"
-                                    placeholder="0.00" step="0.01" min="0" value="{{ old('price') }}" required>
-                                @error('price') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Stock Quantity <span class="text-danger">*</span></label>
-                                <input type="number" name="stock" id="add_stock" class="form-control @error('stock') is-invalid @enderror"
-                                    placeholder="0" min="0" value="{{ old('stock') }}" required>
-                                <div class="form-text text-muted" id="add_stock_hint">Set to 0 if you are adding variants below.</div>
-                                @error('stock') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Product Image</label>
-                                <input type="file" name="image" id="add_image_input"
-                                    class="form-control @error('image') is-invalid @enderror"
-                                    accept="image/jpg,image/jpeg,image/png,image/webp"
-                                    onchange="previewImage(this, 'add_image_preview')">
-                                <div class="form-text">JPG, PNG or WebP &mdash; max 2 MB. Optional.</div>
-                                @error('image') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                <img id="add_image_preview" src="" alt="Preview"
-                                    class="mt-2 rounded d-none" style="height:100px;object-fit:cover;">
-                            </div>
+    <!-- ========================================================
+         4. PRODUCTS DATA TABLE & EMPTY STATES
+         ======================================================== -->
+    <div class="dashboard-card rounded-[8px] overflow-hidden bg-[#171A20] border border-[#272C35] flex flex-col">
+        <!-- Table Header Bar -->
+        <div class="px-3.5 lg:px-4 py-2.5 border-b border-[#272C35] flex items-center justify-between bg-[#111419]/60">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-amber-accent">inventory_2</span>
+                <span class="font-semibold text-white text-[13px] tracking-tight">Product Catalog</span>
+                <span class="px-1.5 py-0.2 rounded bg-surface-variant/40 border border-[#272C35] text-[10px] font-bold text-amber-accent tabular-nums">
+                    <span x-text="filteredProducts.length"></span>
+                </span>
+            </div>
+
+            <div class="text-[11px] text-on-surface-variant">
+                Showing {{ $products->firstItem() ?? 0 }}–{{ $products->lastItem() ?? 0 }} of {{ $products->total() }} products
+            </div>
+        </div>
+
+        <!-- Desktop Dense Table View (>= md) -->
+        <div class="overflow-x-auto custom-scrollbar hidden md:block" x-show="sortedProducts.length > 0">
+            <table class="w-full text-left border-collapse text-body-sm">
+                <thead>
+                    <tr class="border-b border-[#272C35] text-on-surface-variant font-label-caps text-[10px] uppercase bg-[#111419]/30">
+                        <th class="py-2.5 px-3.5 font-bold tracking-wider">Product</th>
+                        <th class="py-2.5 px-3 font-bold tracking-wider">SKU</th>
+                        <th class="py-2.5 px-3 font-bold tracking-wider">Category</th>
+                        <th class="py-2.5 px-3 font-bold tracking-wider text-right">Price</th>
+                        <th class="py-2.5 px-3.5 font-bold tracking-wider">Stock</th>
+                        <th class="py-2.5 px-3 font-bold tracking-wider text-center">Source</th>
+                        <th class="py-2.5 px-3 font-bold tracking-wider">Status</th>
+                        <th class="py-2.5 px-3 font-bold tracking-wider text-right w-[90px]">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <template x-for="p in sortedProducts" :key="p.id">
+                        <tr @click="openProductDrawer(p)"
+                            class="border-b border-[#272C35]/50 last:border-0 hover:bg-[#1E222A] transition-colors cursor-pointer group h-[58px]">
+
+                            <!-- 1. Product (Thumbnail + Name + Subtitle) -->
+                            <td class="py-2 px-3.5">
+                                <div class="flex items-center gap-3">
+                                    <!-- 48px Thumbnail -->
+                                    <div class="w-10 h-10 rounded-[6px] bg-[#111419] border border-[#272C35] flex items-center justify-center overflow-hidden shrink-0">
+                                        <template x-if="p.image_url">
+                                            <img :src="p.image_url" :alt="p.name" class="w-full h-full object-cover">
+                                        </template>
+                                        <template x-if="!p.image_url">
+                                            <span class="material-symbols-outlined text-[18px] text-amber-accent/40">apparel</span>
+                                        </template>
+                                    </div>
+
+                                    <!-- Name & Subtitle -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium text-[12px] text-white group-hover:text-amber-accent transition-colors truncate max-w-[240px]"
+                                             x-text="p.name"></div>
+                                        <div class="text-[10px] text-[#8A8A93] flex items-center gap-1.5 mt-0.5">
+                                            <span x-text="p.variants_count > 0 ? (p.variants_count + ' variants') : 'Single item'"></span>
+                                            <template x-if="p.subcategory">
+                                                <span>&middot;</span>
+                                            </template>
+                                            <span x-text="p.subcategory"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- 2. SKU (Monospace Muted) -->
+                            <td class="py-2 px-3 whitespace-nowrap">
+                                <span class="font-mono text-[#d7c3ae] text-[11px]" x-text="p.sku"></span>
+                            </td>
+
+                            <!-- 3. Category -->
+                            <td class="py-2 px-3 whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white text-[11px] font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-[#F5A623]"></span>
+                                    <span x-text="p.category || '—'"></span>
+                                </span>
+                            </td>
+
+                            <!-- 4. Price (Right-aligned Tabular) -->
+                            <td class="py-2 px-3 text-right whitespace-nowrap">
+                                <span class="font-['Inter'] font-bold text-[13px] text-white tabular-nums tracking-tight"
+                                      x-text="p.price_formatted"></span>
+                            </td>
+
+                            <!-- 5. Stock Level + Progress Bar -->
+                            <td class="py-2 px-3.5 whitespace-nowrap min-w-[130px]">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-['Inter'] font-bold text-[13px] tabular-nums w-7"
+                                          :class="p.stock > 5 ? 'text-emerald-400' : (p.stock > 0 ? 'text-amber-400' : 'text-rose-400')"
+                                          x-text="p.stock"></span>
+
+                                    <!-- Mini level bar -->
+                                    <div class="w-16 h-1.5 bg-[#111419] rounded-full overflow-hidden border border-[#272C35]">
+                                        <div class="h-full rounded-full"
+                                             :class="p.stock > 5 ? 'bg-emerald-400' : (p.stock > 0 ? 'bg-amber-400' : 'bg-rose-500')"
+                                             :style="`width: ${Math.min(100, Math.max(0, (p.stock / 20) * 100))}%`"></div>
+                                    </div>
+
+                                    <template x-if="p.stock > 0 && p.stock <= 5">
+                                        <span class="px-1 py-0.2 rounded text-[9px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">Low</span>
+                                    </template>
+                                    <template x-if="p.stock <= 0">
+                                        <span class="px-1 py-0.2 rounded text-[9px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">Out</span>
+                                    </template>
+                                </div>
+                            </td>
+
+                            <!-- 6. Source Icon Badge -->
+                            <td class="py-2 px-3 text-center whitespace-nowrap">
+                                <template x-if="p.is_shopify">
+                                    <span class="w-6 h-6 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/25 inline-flex items-center justify-center"
+                                          title="Synced from Shopify">
+                                        <span class="material-symbols-outlined text-[13px]">cloud_sync</span>
+                                    </span>
+                                </template>
+                                <template x-if="!p.is_shopify">
+                                    <span class="w-6 h-6 rounded-full bg-amber-500/10 text-amber-accent border border-amber-500/25 inline-flex items-center justify-center"
+                                          title="Local In-Store Product">
+                                        <span class="material-symbols-outlined text-[13px]">store</span>
+                                    </span>
+                                </template>
+                            </td>
+
+                            <!-- 7. Status Pill -->
+                            <td class="py-2 px-3 whitespace-nowrap">
+                                <template x-if="p.stock > 0">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Active
+                                    </span>
+                                </template>
+                                <template x-if="p.stock <= 0">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Out of Stock
+                                    </span>
+                                </template>
+                            </td>
+
+                            <!-- 8. Actions (Single Row, No Wrap!) -->
+                            <td class="py-2 px-3 text-right whitespace-nowrap" @click.stop>
+                                <div class="flex items-center justify-end gap-1">
+                                    <!-- Edit Pencil Button (if local) -->
+                                    <template x-if="!p.is_shopify">
+                                        <button type="button"
+                                                @click="openEditModal(p)"
+                                                class="w-7 h-7 rounded-[4px] bg-[#111419] hover:bg-amber-accent/15 text-[#8A8A93] hover:text-amber-accent border border-[#272C35] flex items-center justify-center transition-colors cursor-pointer"
+                                                title="Edit Product">
+                                            <span class="material-symbols-outlined text-[14px]">edit</span>
+                                        </button>
+                                    </template>
+
+                                    <!-- Overflow ⋯ Menu Button -->
+                                    <button type="button"
+                                            @click.stop="toggleProductActionMenu(p, $event)"
+                                            class="w-7 h-7 rounded-[4px] bg-[#111419] hover:bg-[#1E222A] text-[#8A8A93] hover:text-white border border-[#272C35] flex items-center justify-center transition-colors cursor-pointer"
+                                            title="More Actions">
+                                        <span class="material-symbols-outlined text-[15px]">more_horiz</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Stacked Card View (< md) -->
+        <div class="md:hidden flex flex-col divide-y divide-[#272C35]/50" x-show="sortedProducts.length > 0">
+            <template x-for="p in sortedProducts" :key="'mob-' + p.id">
+                <div @click="openProductDrawer(p)"
+                     class="p-3 hover:bg-[#1E222A] transition-colors cursor-pointer flex flex-col gap-2">
+                    
+                    <div class="flex items-start gap-3">
+                        <div class="w-12 h-12 rounded-[6px] bg-[#111419] border border-[#272C35] flex items-center justify-center overflow-hidden shrink-0">
+                            <template x-if="p.image_url">
+                                <img :src="p.image_url" :alt="p.name" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!p.image_url">
+                                <span class="material-symbols-outlined text-[20px] text-amber-accent/40">apparel</span>
+                            </template>
                         </div>
 
-                        {{-- Variants Section --}}
-                        <hr class="my-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-semibold text-muted text-uppercase small mb-0">
-                                <i class="fas fa-palette me-1"></i> Variants
-                                <span class="badge bg-secondary ms-1" id="add_variant_count">0</span>
-                                <span class="fw-normal ms-1" style="font-size:0.75rem;text-transform:none;">&mdash; Optional</span>
-                            </h6>
-                            <button type="button" class="btn btn-outline-success btn-sm" onclick="addProductVariantRow()">
-                                <i class="fas fa-plus me-1"></i> Add Variant
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-[13px] text-white truncate" x-text="p.name"></span>
+                                <span class="font-['Inter'] font-bold text-[13px] text-white tabular-nums" x-text="p.price_formatted"></span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[10px] text-[#8A8A93] mt-0.5">
+                                <span class="font-mono" x-text="p.sku"></span>
+                                <span>&middot;</span>
+                                <span x-text="p.category"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1 border-t border-[#272C35]/50 text-[11px]" @click.stop>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold tabular-nums"
+                                  :class="p.stock > 5 ? 'text-emerald-400' : (p.stock > 0 ? 'text-amber-400' : 'text-rose-400')"
+                                  x-text="p.stock + ' units'"></span>
+                            <span class="px-1.5 py-0.2 rounded text-[9px] uppercase font-bold"
+                                  :class="p.stock > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'"
+                                  x-text="p.stock > 0 ? 'Active' : 'Out of Stock'"></span>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <template x-if="!p.is_shopify">
+                                <button type="button"
+                                        @click="openEditModal(p)"
+                                        class="px-2 py-1 rounded bg-[#111419] text-[#d7c3ae] border border-[#272C35] text-[10px] font-semibold flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[13px]">edit</span> Edit
+                                </button>
+                            </template>
+                            <button type="button"
+                                    @click.stop="toggleProductActionMenu(p, $event)"
+                                    class="w-7 h-6 rounded bg-[#111419] text-[#8A8A93] hover:text-white border border-[#272C35] flex items-center justify-center text-[10px]">
+                                <span class="material-symbols-outlined text-[14px]">more_horiz</span>
                             </button>
                         </div>
-                        <div id="add_variant_rows_empty" class="text-muted small py-2 ps-1">
-                            No variants added. Click <strong>Add Variant</strong> to add color / size options.
-                        </div>
-                        <div class="table-responsive d-none" id="add_variants_table_wrap">
-                            <table class="table table-sm table-bordered align-middle mb-1">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width:36px;">Color</th>
-                                        <th>Color Name</th>
-                                        <th>Size</th>
-                                        <th>Variant SKU</th>
-                                        <th>Price (Rs.)</th>
-                                        <th style="width:80px;">Stock <span class="text-danger">*</span></th>
-                                        <th style="width:40px;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="add_variants_tbody"></tbody>
-                            </table>
-                        </div>
-                        <small class="text-muted d-none" id="add_variant_footer_hint">
-                            <i class="fas fa-info-circle me-1"></i>At least one of Color or Size is required per row. Product stock will be set to the sum of all variant stocks on save.
-                        </small>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-gold">
-                            <i class="fas fa-save me-1"></i> Save Product
+                </div>
+            </template>
+        </div>
+
+        <!-- 1. Default First-Run Empty State (0 products total in DB) -->
+        <div x-show="totalProductsCount === 0 && !isFiltered" class="py-16 px-4 text-center">
+            <div class="w-14 h-14 rounded-full bg-surface-variant/40 border border-[#272C35] flex items-center justify-center mx-auto mb-3 text-[#5A5A63]">
+                <span class="material-symbols-outlined text-[28px]">inventory_2</span>
+            </div>
+            <h3 class="text-[16px] font-bold text-white mb-1">No products yet</h3>
+            <p class="text-[12px] text-[#8A8A93] max-w-sm mx-auto mb-4 leading-relaxed">
+                Add your first in-store product or sync with Shopify to populate your catalog.
+            </p>
+            <button type="button"
+                    @click="openAddProductModal()"
+                    class="h-[34px] px-4 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] flex items-center gap-1.5 cursor-pointer border-0 transition-colors shadow-md mx-auto">
+                <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'wght' 700;">add</span>
+                <span>Add your first product</span>
+            </button>
+        </div>
+
+        <!-- 2. Filtered Empty State (No products match active filters) -->
+        <div x-show="(totalProductsCount > 0 || isFiltered) && sortedProducts.length === 0" class="py-14 px-4 text-center">
+            <span class="material-symbols-outlined text-[36px] text-[#5A5A63] mb-2 block">filter_alt_off</span>
+            <div class="text-[14px] font-semibold text-white mb-1">No products match these filters</div>
+            <p class="text-[12px] text-[#8A8A93] max-w-sm mx-auto mb-3">
+                Try adjusting your search query, category, or stock status filter.
+            </p>
+            <a href="{{ route('products.index') }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-[#111419] hover:bg-[#1E222A] text-amber-accent border border-[#272C35] text-[11px] font-bold uppercase tracking-wider no-underline transition-colors">
+                <span class="material-symbols-outlined text-[14px]">refresh</span>
+                <span>Clear Filters</span>
+            </a>
+        </div>
+
+        <!-- ========================================================
+             5. FOOTER & PAGINATION
+             ======================================================== -->
+        @if ($products->hasPages())
+            <div class="p-3 border-t border-[#272C35] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#111419]/40">
+                <div class="text-[11px] text-[#8A8A93]">
+                    Showing {{ $products->firstItem() ?? 0 }} to {{ $products->lastItem() ?? 0 }} of {{ $products->total() }} products
+                </div>
+
+                <!-- Custom Dark Pagination -->
+                <div class="flex items-center gap-1 select-none">
+                    @if ($products->onFirstPage())
+                        <span class="dashboard-control w-8 h-8 rounded-[4px] opacity-40 flex items-center justify-center cursor-not-allowed">
+                            <span class="material-symbols-outlined text-[16px] text-[#8A8A93]">chevron_left</span>
+                        </span>
+                    @else
+                        <a href="{{ $products->previousPageUrl() }}"
+                           class="dashboard-control w-8 h-8 rounded-[4px] flex items-center justify-center hover:text-amber-accent transition-colors no-underline">
+                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                        </a>
+                    @endif
+
+                    @foreach ($products->getUrlRange(max(1, $products->currentPage() - 2), min($products->lastPage(), $products->currentPage() + 2)) as $page => $url)
+                        @if ($page == $products->currentPage())
+                            <span class="w-8 h-8 rounded-[4px] bg-[#1E222A] border border-[#F5A623]/50 text-amber-accent font-bold text-[12px] flex items-center justify-center tabular-nums">
+                                {{ $page }}
+                            </span>
+                        @else
+                            <a href="{{ $url }}"
+                               class="dashboard-control w-8 h-8 rounded-[4px] text-[#d7c3ae] hover:text-white font-medium text-[12px] flex items-center justify-center transition-colors no-underline tabular-nums">
+                                {{ $page }}
+                            </a>
+                        @endif
+                    @endforeach
+
+                    @if ($products->hasMorePages())
+                        <a href="{{ $products->nextPageUrl() }}"
+                           class="dashboard-control w-8 h-8 rounded-[4px] flex items-center justify-center hover:text-amber-accent transition-colors no-underline">
+                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                        </a>
+                    @else
+                        <span class="dashboard-control w-8 h-8 rounded-[4px] opacity-40 flex items-center justify-center cursor-not-allowed">
+                            <span class="material-symbols-outlined text-[16px] text-[#8A8A93]">chevron_right</span>
+                        </span>
+                    @endif
+                </div>
+            </div>
+        @endif
+    </div>
+
+    <!-- ========================================================
+         6. SHARED PRODUCT DETAIL DRAWER (Teleported to Body)
+         ======================================================== -->
+    <x-pos.product-drawer />
+
+    <!-- Actions "⋯" Dropdown (Teleported to Body with Fixed Coordinates) -->
+    <template x-teleport="body">
+        <div id="productActionsFloatingMenu"
+             x-show="activeMenuProduct"
+             @click.outside="closeProductActionMenu()"
+             @keydown.escape.window="closeProductActionMenu()"
+             :style="`position: fixed; top: ${menuY}px; left: ${menuX}px; width: 190px; z-index: 9999; margin: 0;`"
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             class="rounded-[6px] bg-[#13151A] border border-white/10 shadow-2xl py-1.5 flex flex-col text-left text-[11px] select-none"
+             style="display: none;">
+            
+            <!-- Manage Variants -->
+            <button type="button"
+                    @click="const p = activeMenuProduct; closeProductActionMenu(); openVariantsModal(p)"
+                    class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer transition-colors">
+                <span class="material-symbols-outlined text-[14px]">palette</span>
+                <span>Manage Variants</span>
+            </button>
+
+            <!-- Print Barcode -->
+            <template x-if="!activeMenuProduct?.is_shopify">
+                <button type="button"
+                        @click="const p = activeMenuProduct; closeProductActionMenu(); openBarcodeModal(p)"
+                        class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer transition-colors">
+                    <span class="material-symbols-outlined text-[14px]">barcode</span>
+                    <span>Print Barcode Label</span>
+                </button>
+            </template>
+
+            <!-- Edit (if local) -->
+            <template x-if="!activeMenuProduct?.is_shopify">
+                <button type="button"
+                        @click="const p = activeMenuProduct; closeProductActionMenu(); openEditModal(p)"
+                        class="px-3 py-1.5 text-[#d7c3ae] hover:text-white hover:bg-[#1E222A] flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer transition-colors">
+                    <span class="material-symbols-outlined text-[14px]">edit</span>
+                    <span>Edit Product</span>
+                </button>
+            </template>
+
+            <!-- Delete Product (Red) -->
+            <template x-if="!activeMenuProduct?.is_shopify">
+                <button type="button"
+                        @click="const p = activeMenuProduct; closeProductActionMenu(); confirmDeleteProduct(p)"
+                        class="px-3 py-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center gap-2 w-full text-left bg-transparent border-0 cursor-pointer transition-colors border-t border-[#272C35]/50 mt-1">
+                    <span class="material-symbols-outlined text-[14px]">delete</span>
+                    <span>Delete Product</span>
+                </button>
+            </template>
+        </div>
+    </template>
+
+    <!-- Hidden form for deleting product -->
+    <form id="deleteProductRealForm" method="POST" action="" style="display:none;">
+        @csrf
+        @method('DELETE')
+    </form>
+
+    <!-- ========================================================
+         7. ADD / EDIT / VARIANTS MODALS (Preserving Logic & Dark Theme)
+         ======================================================== -->
+    
+    <!-- Modal: Add Product Modal -->
+    <template x-teleport="body">
+        <div x-show="addProductModalOpen"
+             @keydown.escape.window="addProductModalOpen = false"
+             class="fixed inset-0 z-[10000] overflow-y-auto flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs"
+             style="display: none;">
+            <div class="w-full max-w-2xl rounded-[8px] bg-[#13151A] border border-[#272C35] p-5 shadow-2xl flex flex-col gap-3.5 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data">
+                    @csrf
+                    <div class="flex items-center justify-between border-b border-[#272C35] pb-3 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[20px] text-amber-accent">add_box</span>
+                            <h4 class="m-0 text-[15px] font-bold text-white">Add Local Product (In-Store)</h4>
+                        </div>
+                        <button type="button" @click="addProductModalOpen = false" class="dashboard-control w-6 h-6 rounded flex items-center justify-center text-[#8A8A93] hover:text-white border-0 cursor-pointer">
+                            <span class="material-symbols-outlined text-[15px]">close</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Product Name <span class="text-rose-400">*</span></label>
+                            <input type="text" name="name" required placeholder="e.g. Classic Pima Cotton T-Shirt"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px]">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">SKU <span class="text-rose-400">*</span></label>
+                            <input type="text" name="sku" required placeholder="e.g. TEE-PIMA-BLK"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px] font-mono">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Category <span class="text-rose-400">*</span></label>
+                            <input type="text" name="category" required placeholder="e.g. Men, Tops..." list="addCatList"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px]">
+                            <datalist id="addCatList">
+                                @foreach($categories as $c) <option value="{{ $c }}"> @endforeach
+                            </datalist>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Sub-Category</label>
+                            <input type="text" name="subcategory" placeholder="e.g. T-Shirts, Jeans..."
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px]">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Retail Price (Rs.) <span class="text-rose-400">*</span></label>
+                            <input type="number" name="price" step="0.01" min="0" required placeholder="0.00"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px] font-['Inter'] tabular-nums">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Stock Quantity <span class="text-rose-400">*</span></label>
+                            <input type="number" name="stock" min="0" required placeholder="0"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px] font-['Inter'] tabular-nums">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Product Image</label>
+                            <input type="file" name="image" accept="image/*"
+                                   class="dashboard-control w-full h-[36px] px-2 text-[11px] text-white bg-[#111419] rounded-[6px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-amber-accent file:text-black">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 mt-4 border-t border-[#272C35]">
+                        <button type="button" @click="addProductModalOpen = false" class="dashboard-control h-[32px] px-3 text-[11px] font-semibold text-[#d7c3ae] hover:text-white rounded-[6px]">
+                            Cancel
+                        </button>
+                        <button type="submit" class="h-[32px] px-4 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] border-0 cursor-pointer">
+                            Save Product
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
+    </template>
 
-    {{-- ===== EDIT Local Product Modal ===== --}}
-    <div class="modal fade" id="editProductModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form method="POST" id="editProductForm" action="" enctype="multipart/form-data">
+    <!-- Modal: Edit Product Modal -->
+    <template x-teleport="body">
+        <div x-show="editProductModalOpen"
+             @keydown.escape.window="editProductModalOpen = false"
+             class="fixed inset-0 z-[10000] overflow-y-auto flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs"
+             style="display: none;">
+            <div class="w-full max-w-2xl rounded-[8px] bg-[#13151A] border border-[#272C35] p-5 shadow-2xl flex flex-col gap-3.5 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <form method="POST" :action="editingProduct?.id ? `/products/${editingProduct.id}` : '#'" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-edit me-2 text-primary"></i> Edit Local Product
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <div class="flex items-center justify-between border-b border-[#272C35] pb-3 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[20px] text-amber-accent">edit_note</span>
+                            <h4 class="m-0 text-[15px] font-bold text-white">Edit Product</h4>
+                        </div>
+                        <button type="button" @click="editProductModalOpen = false" class="dashboard-control w-6 h-6 rounded flex items-center justify-center text-[#8A8A93] hover:text-white border-0 cursor-pointer">
+                            <span class="material-symbols-outlined text-[15px]">close</span>
+                        </button>
                     </div>
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
-                                <input type="text" name="name" id="edit_name" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">SKU <span class="text-danger">*</span></label>
-                                <input type="text" name="sku" id="edit_sku" class="form-control" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
-                                <input type="text" name="category" id="edit_category" class="form-control" list="categoryList" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Sub-Category</label>
-                                <input type="text" name="subcategory" id="edit_subcategory" class="form-control" list="subcategoryList" placeholder="e.g. Necklaces, Rings...">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Price (Rs.) <span class="text-danger">*</span></label>
-                                <input type="number" name="price" id="edit_price" class="form-control" step="0.01" min="0" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Stock Quantity <span class="text-danger">*</span></label>
-                                <input type="number" name="stock" id="edit_stock" class="form-control" min="0" required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Product Image</label>
-                                <div class="d-flex align-items-center gap-3 mb-2">
-                                    <img id="edit_image_preview" src="" alt="Current"
-                                        class="rounded d-none" style="height:70px;object-fit:cover;">
-                                    <div id="edit_no_image" class="d-flex align-items-center justify-content-center rounded bg-light"
-                                        style="width:70px;height:70px;">
-                                        <i class="fas fa-tshirt text-secondary"></i>
-                                    </div>
-                                </div>
-                                <input type="file" name="image" id="edit_image_input"
-                                    class="form-control"
-                                    accept="image/jpg,image/jpeg,image/png,image/webp"
-                                    onchange="previewImage(this, 'edit_image_preview')">
-                                <div class="form-text">Upload a new image to replace the current one. JPG, PNG or WebP &mdash; max 2 MB.</div>
-                                <div class="form-check mt-2" id="edit_remove_wrap">
-                                    <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="edit_remove_image">
-                                    <label class="form-check-label text-danger small" for="edit_remove_image">Remove current image</label>
-                                </div>
-                            </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Product Name <span class="text-rose-400">*</span></label>
+                            <input type="text" name="name" x-model="editingProduct.name" required
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px]">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">SKU <span class="text-rose-400">*</span></label>
+                            <input type="text" name="sku" x-model="editingProduct.sku" required
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px] font-mono">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Category <span class="text-rose-400">*</span></label>
+                            <input type="text" name="category" x-model="editingProduct.category" required list="editCatList"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px]">
+                            <datalist id="editCatList">
+                                @foreach($categories as $c) <option value="{{ $c }}"> @endforeach
+                            </datalist>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Sub-Category</label>
+                            <input type="text" name="subcategory" x-model="editingProduct.subcategory"
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px]">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Retail Price (Rs.) <span class="text-rose-400">*</span></label>
+                            <input type="number" name="price" x-model="editingProduct.price" step="0.01" min="0" required
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px] font-['Inter'] tabular-nums">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Stock Quantity <span class="text-rose-400">*</span></label>
+                            <input type="number" name="stock" x-model="editingProduct.stock" min="0" required
+                                   class="dashboard-control w-full h-[36px] px-3 text-white bg-[#111419] rounded-[6px] font-['Inter'] tabular-nums">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-semibold text-[#d7c3ae] mb-1">Replace Image</label>
+                            <input type="file" name="image" accept="image/*"
+                                   class="dashboard-control w-full h-[36px] px-2 text-[11px] text-white bg-[#111419] rounded-[6px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-amber-accent file:text-black">
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> Update Product
+
+                    <div class="flex items-center justify-end gap-2 pt-3 mt-4 border-t border-[#272C35]">
+                        <button type="button" @click="editProductModalOpen = false" class="dashboard-control h-[32px] px-3 text-[11px] font-semibold text-[#d7c3ae] hover:text-white rounded-[6px]">
+                            Cancel
+                        </button>
+                        <button type="submit" class="h-[32px] px-4 bg-[#F5A623] hover:bg-[#F5A623]/90 text-[#14161A] font-bold text-[11px] uppercase tracking-wider rounded-[6px] border-0 cursor-pointer">
+                            Update Product
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
+    </template>
 
-    {{-- ===== MANAGE VARIANTS Modal ===== --}}
-    <div class="modal fade" id="variantsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-palette me-2 text-gold"></i> Manage Variants &mdash; <span id="variants-modal-product-name"></span>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Current Variants -->
-                    <h6 class="fw-semibold mb-2">Current Variants</h6>
-                    <div id="variants-list-loading" class="text-center py-3 text-muted">
-                        <i class="fas fa-spinner fa-spin me-1"></i> Loading...
+    <!-- Modal: Variants Modal -->
+    <template x-teleport="body">
+        <div x-show="variantsModalOpen"
+             @keydown.escape.window="variantsModalOpen = false"
+             class="fixed inset-0 z-[10000] overflow-y-auto flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs"
+             style="display: none;">
+            <div class="w-full max-w-lg rounded-[8px] bg-[#13151A] border border-[#272C35] p-5 shadow-2xl flex flex-col gap-3.5">
+                <div class="flex items-center justify-between border-b border-[#272C35] pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px] text-amber-accent">palette</span>
+                        <h4 class="m-0 text-[15px] font-bold text-white" x-text="'Variants & Options: ' + (activeVariantsProduct?.name || '')"></h4>
                     </div>
-                    <div id="variants-list-container" class="d-none"></div>
+                    <button type="button" @click="variantsModalOpen = false" class="dashboard-control w-6 h-6 rounded flex items-center justify-center text-[#8A8A93] hover:text-white border-0 cursor-pointer">
+                        <span class="material-symbols-outlined text-[15px]">close</span>
+                    </button>
+                </div>
 
-                    <!-- Add Variant Form (local products only) -->
-                    <div id="add-variant-section" class="mt-4 d-none">
-                        <h6 class="fw-semibold mb-2"><i class="fas fa-plus me-1 text-success"></i> Add New Variant</h6>
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label small fw-semibold">Color Name</label>
-                                <input type="text" id="v_color" class="form-control form-control-sm" placeholder="e.g. Gold, Silver, Red..." list="colorSuggestions">
-                                <datalist id="colorSuggestions">
-                                    <option value="Gold"><option value="Silver"><option value="Rose Gold">
-                                    <option value="Platinum"><option value="White Gold"><option value="Yellow Gold">
-                                    <option value="Black"><option value="Pink"><option value="Red"><option value="Blue">
-                                </datalist>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Color Code</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="color" id="v_color_picker" class="form-control form-control-color p-1"
-                                        value="#FFD700" oninput="document.getElementById('v_color_code').value=this.value"
-                                        style="max-width:38px;min-width:38px;">
-                                    <input type="text" id="v_color_code" class="form-control form-control-sm" placeholder="#FFD700" maxlength="20">
-                                </div>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label small fw-semibold">Size</label>
-                                <input type="text" id="v_size" class="form-control form-control-sm" placeholder="e.g. S, M, L, XL, 6, 7, Free Size..." list="sizeSuggestions">
-                                <datalist id="sizeSuggestions">
-                                    <option value="XS"><option value="S"><option value="M"><option value="L">
-                                    <option value="XL"><option value="XXL">
-                                    <option value="5"><option value="6"><option value="7"><option value="8"><option value="9"><option value="10">
-                                    <option value="Free Size">
-                                </datalist>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-semibold">SKU</label>
-                                <input type="text" id="v_sku" class="form-control form-control-sm" placeholder="Optional">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Price (Rs.)</label>
-                                <input type="number" id="v_price" class="form-control form-control-sm" placeholder="Blank = product price" step="0.01" min="0">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small fw-semibold">Stock <span class="text-danger">*</span></label>
-                                <input type="number" id="v_stock" class="form-control form-control-sm" placeholder="0" min="0" value="0">
-                            </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn btn-success btn-sm w-100" onclick="addVariant()" id="add-variant-btn">
-                                    <i class="fas fa-plus me-1"></i> Add Variant
-                                </button>
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-1"><i class="fas fa-info-circle me-1"></i>At least one of Color or Size is required.</small>
-                    </div>
-
-                    <!-- Shopify note -->
-                    <div id="shopify-variants-note" class="d-none mt-3">
-                        <div class="alert alert-info mb-0">
-                            <i class="fab fa-shopify me-1"></i> Variants for Shopify products are managed in your Shopify store. Use <strong>Sync with Shopify</strong> to refresh them here.
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- ===== ADVANCED BARCODE Modal ===== --}}
-    <div class="modal fade" id="barcodeModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content" style="border:none; border-radius:12px; overflow:hidden;">
-                <!-- Header -->
-                <div class="modal-header" style="background:#0f172a; color:#fff; padding:1.2rem 1.5rem; border-bottom:none;">
-                    <div>
-                        <h5 class="modal-title mb-1" style="font-weight:700; display:flex; align-items:center; gap:10px;">
-                            <i class="fas fa-barcode text-warning"></i> Product Barcode Printing
-                        </h5>
-                        <div style="font-size:0.8rem; color:#94a3b8;">Design and print professional barcode labels</div>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                
-                <div class="modal-body p-0" style="background:#f8fafc;">
-                    <div class="row g-0">
-                        <!-- LEFT COLUMN: Preview & Templates -->
-                        <div class="col-lg-5 p-4 border-end" style="background:#fff;">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                <!-- Existing Variants List -->
+                <div class="flex flex-col gap-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                    <template x-for="v in (activeVariantsProduct?.variants || [])" :key="v.id">
+                        <div class="p-2.5 rounded bg-[#171A20] border border-[#272C35] flex items-center justify-between text-[12px]">
+                            <div class="flex items-center gap-2">
+                                <template x-if="v.color_code">
+                                    <span class="w-4 h-4 rounded-full border border-white/20 shrink-0"
+                                          :style="`background-color: ${v.color_code};`"></span>
+                                </template>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark">Label Preview</h6>
-                                    <small class="text-muted">This is how your label will look</small>
-                                </div>
-                                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill" id="lbl-size-badge" style="font-size:0.75rem; font-weight:600;">Size: 38mm x 25mm</span>
-                            </div>
-
-                            <!-- Live Preview Area -->
-                            <div class="d-flex justify-content-center align-items-center p-4 mb-4" style="background:#f1f5f9; border-radius:12px; border:1px solid #e2e8f0; min-height: 250px;">
-                                <div id="barcode-preview-wrap" style="background:#fff; width: 38mm; height: 25mm; display:flex; flex-direction:column; justify-content:center; align-items:center; box-sizing: border-box; overflow:hidden; border-radius:4px; box-shadow:0 4px 6px rgba(0,0,0,0.05); position:relative;">
-                                    <div class="position-absolute" style="left:-25px; top:50%; transform:translateY(-50%) rotate(-90deg); font-size:0.6rem; color:#64748b; letter-spacing:1px;" id="lbl-dim-h">25mm</div>
-                                    <div class="position-absolute" style="bottom:-20px; left:50%; transform:translateX(-50%); font-size:0.6rem; color:#64748b; letter-spacing:1px;" id="lbl-dim-w">38mm</div>
-                                    
-                                    <div id="prev-brand" class="fw-bold" style="font-size: 8pt; letter-spacing: 0.5px; margin-bottom: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">APPAREL OUTLET</div>
-                                    <div id="prev-tagline" style="font-size: 4.5pt; font-weight: bold; margin-bottom: 1mm; line-height:1; font-family:'Arial', sans-serif;">PREMIUM QUALITY | 100% COTTON</div>
-                                    <svg id="barcode-svg" style="height:7mm; width:auto; display:block; margin:0 auto;"></svg>
-                                    <div id="prev-sku" class="fw-bold" style="font-size: 6pt; margin-top: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">TSH-BLK-L</div>
-                                    <div id="prev-name" style="font-size: 5pt; margin-top: 0.5mm; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; font-family:'Arial', sans-serif;">Classic Cotton Crewneck Tee - Black (L)</div>
-                                    <div id="prev-price" class="fw-bold" style="font-size: 7.5pt; margin-top: 0.5mm; line-height:1; font-family:'Arial', sans-serif;">Rs. 2,450</div>
+                                    <span class="text-white font-medium block" x-text="v.label"></span>
+                                    <span class="font-mono text-[10px] text-[#8A8A93]" x-text="'SKU: ' + (v.sku || activeVariantsProduct.sku)"></span>
                                 </div>
                             </div>
-
-                            <!-- Quick Templates -->
-                            <h6 class="fw-bold mb-1 text-dark">Quick Templates</h6>
-                            <small class="text-muted d-block mb-3">Choose a ready-made layout</small>
-                            <div class="row g-2">
-                                <div class="col-4">
-                                    <div class="template-card border rounded p-2 text-center position-relative active-template" onclick="applyTemplate('standard', this)" style="cursor:pointer; border-color:#f59e0b!important;">
-                                        <i class="fas fa-check-circle text-warning position-absolute top-0 end-0 m-1"></i>
-                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; height:60px; margin-bottom:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                            <div style="font-size:4px; font-weight:bold;">APPAREL</div>
-                                            <div style="font-size:3px;">PREMIUM COTTON...</div>
-                                            <div style="width:70%; height:10px; background:#333; margin:2px 0;"></div>
-                                            <div style="font-size:4px;">TSH-BLK-L</div>
-                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,450</div>
-                                        </div>
-                                        <div class="fw-bold" style="font-size:0.75rem;">Standard</div>
-                                        <div style="font-size:0.65rem; color:#64748b;">38mm x 25mm</div>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="template-card border rounded p-2 text-center position-relative" onclick="applyTemplate('compact', this)" style="cursor:pointer;">
-                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; height:60px; margin-bottom:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                            <div style="font-size:5px; font-weight:bold;">APPAREL</div>
-                                            <div style="width:80%; height:12px; background:#333; margin:2px 0;"></div>
-                                            <div style="font-size:4px;">TSH-BLK-L</div>
-                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,450</div>
-                                        </div>
-                                        <div class="fw-bold" style="font-size:0.75rem;">Compact</div>
-                                        <div style="font-size:0.65rem; color:#64748b;">38mm x 20mm</div>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="template-card border rounded p-2 text-center position-relative" onclick="applyTemplate('minimal', this)" style="cursor:pointer;">
-                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; height:60px; margin-bottom:8px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                                            <div style="width:80%; height:15px; background:#333; margin-bottom:4px;"></div>
-                                            <div style="font-size:4px;">TSH-BLK-L</div>
-                                            <div style="font-size:5px; font-weight:bold;">Rs. 2,450</div>
-                                        </div>
-                                        <div class="fw-bold" style="font-size:0.75rem;">Minimal</div>
-                                        <div style="font-size:0.65rem; color:#64748b;">38mm x 25mm</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-3 text-muted" style="font-size:0.7rem;">
-                                <i class="fas fa-info-circle me-1"></i> This is a preview only. Actual print may vary slightly depending on printer settings.
+                            <div class="text-right">
+                                <span class="font-bold tabular-nums"
+                                      :class="v.stock > 0 ? 'text-emerald-400' : 'text-rose-400'"
+                                      x-text="v.stock + ' in stock'"></span>
                             </div>
                         </div>
+                    </template>
 
-                        <!-- RIGHT COLUMN: Settings -->
-                        <div class="col-lg-7 p-4">
-                            <h6 class="fw-bold mb-1 text-dark">Print Settings</h6>
-                            <small class="text-muted d-block mb-4">Configure your barcode label</small>
-
-                            <!-- Select Product -->
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold" style="font-size:0.85rem;">Select Product</label>
-                                <select id="bc-product-select" class="form-select">
-                                    <!-- Populated dynamically via openBarcodeModal -->
-                                </select>
-                            </div>
-
-                            <div class="row g-3 mb-4">
-                                <div class="col-4">
-                                    <label class="form-label fw-semibold" style="font-size:0.85rem;">Number of Labels</label>
-                                    <input type="number" id="bc-qty" class="form-control" value="1" min="1">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label fw-semibold" style="font-size:0.85rem;">Labels Per Row</label>
-                                    <select id="bc-per-row" class="form-select">
-                                        <option value="1">1</option>
-                                        <option value="2" selected>2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                    </select>
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label fw-semibold" style="font-size:0.85rem;">Barcode Format</label>
-                                    <select id="bc-format" class="form-select" onchange="generateLiveBarcode()">
-                                        <option value="CODE128" selected>CODE128</option>
-                                        <option value="EAN13">EAN-13</option>
-                                        <option value="CODE39">CODE39</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Customize Content -->
-                            <div class="card shadow-sm border-0 mb-4">
-                                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
-                                    <h6 class="fw-bold mb-0" style="font-size:0.85rem;">Customize Label Content</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-flex flex-column gap-3">
-                                        <!-- Brand -->
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="form-check">
-                                                <input class="form-check-input check-brand" type="checkbox" id="chk-brand" checked onchange="togglePreview('brand')">
-                                                <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-brand">
-                                                    Brand Name (<span id="val-brand">APPAREL OUTLET</span>)
-                                                </label>
-                                            </div>
-                                            <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('brand')"><i class="fas fa-pen me-1"></i> Edit</button>
-                                        </div>
-                                        <!-- Tagline -->
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="form-check">
-                                                <input class="form-check-input check-tagline" type="checkbox" id="chk-tagline" checked onchange="togglePreview('tagline')">
-                                                <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-tagline">
-                                                    Tagline (<span id="val-tagline">PREMIUM QUALITY | 100% COTTON</span>)
-                                                </label>
-                                            </div>
-                                            <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('tagline')"><i class="fas fa-pen me-1"></i> Edit</button>
-                                        </div>
-                                        <!-- SKU -->
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="form-check">
-                                                <input class="form-check-input check-sku" type="checkbox" id="chk-sku" checked onchange="togglePreview('sku')">
-                                                <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-sku">
-                                                    Product SKU (<span id="val-sku">GLM156G50</span>)
-                                                </label>
-                                            </div>
-                                            <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('sku')"><i class="fas fa-pen me-1"></i> Edit</button>
-                                        </div>
-                                        <!-- Name -->
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="form-check">
-                                                <input class="form-check-input check-name" type="checkbox" id="chk-name" checked onchange="togglePreview('name')">
-                                                <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-name">
-                                                    Product Name (<span id="val-name">2mm Cuban Nc GOLD 50cm</span>)
-                                                </label>
-                                            </div>
-                                            <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('name')"><i class="fas fa-pen me-1"></i> Edit</button>
-                                        </div>
-                                        <!-- Price -->
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="form-check">
-                                                <input class="form-check-input check-price" type="checkbox" id="chk-price" checked onchange="togglePreview('price')">
-                                                <label class="form-check-label fw-semibold" style="font-size:0.85rem;" for="chk-price">
-                                                    Price (<span id="val-price">Rs. 2,190</span>)
-                                                </label>
-                                            </div>
-                                            <button class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;" onclick="editContent('price')"><i class="fas fa-pen me-1"></i> Edit</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <label class="form-label fw-semibold" style="font-size:0.85rem;">Font Settings</label>
-                                    <small class="text-muted d-block mb-2" style="font-size:0.7rem;">Choose font for label text</small>
-                                    <select id="bc-font" class="form-select mb-2" onchange="updatePreviewStyles()">
-                                        <option value="'Zebra 0', sans-serif">Zebra 0 (Recommended)</option>
-                                    </select>
-                                    <div class="form-check mt-2">
-                                        <input class="form-check-input" type="checkbox" id="bc-bold" checked onchange="updatePreviewStyles()">
-                                        <label class="form-check-label fw-semibold" style="font-size:0.8rem;" for="bc-bold">Bold Text</label>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label fw-semibold" style="font-size:0.85rem;">Label Size</label>
-                                    <small class="text-muted d-block mb-2" style="font-size:0.7rem;">Select label size (Width x Height)</small>
-                                    <select id="bc-size" class="form-select" onchange="updateLabelSize()">
-                                        <option value="38x25" selected>38mm x 25mm</option>
-                                        <option value="38x20">38mm x 20mm</option>
-                                        <option value="50x25">50mm x 25mm</option>
-                                    </select>
-                                </div>
-                            </div>
-
+                    <template x-if="!activeVariantsProduct?.variants || activeVariantsProduct?.variants?.length === 0">
+                        <div class="p-6 text-center text-[#8A8A93] text-[12px]">
+                            No variants defined for this product.
                         </div>
-                    </div>
+                    </template>
                 </div>
 
-                <div class="modal-footer d-flex justify-content-between align-items-center" style="background:#fff; border-top:1px solid #e2e8f0; padding:1.2rem 1.5rem;">
-                    <button class="btn btn-outline-secondary" style="font-weight:600;" onclick="resetBarcodeDefaults()"><i class="fas fa-undo me-2"></i>Reset to Default</button>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-light" data-bs-dismiss="modal" style="font-weight:600; border:1px solid #d1d5db;">Cancel</button>
-                        <button class="btn text-white" onclick="executeBarcodePrint()" style="background:#f59e0b; font-weight:600; padding:0.5rem 2rem;">
-                            <i class="fas fa-print me-2"></i> Print Barcode
-                        </button>
-                    </div>
+                <div class="flex items-center justify-end pt-2 border-t border-[#272C35]">
+                    <button type="button" @click="variantsModalOpen = false" class="dashboard-control h-[32px] px-4 text-[11px] font-semibold text-[#d7c3ae] hover:text-white rounded-[6px]">
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </template>
 
+</div>
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@floating-ui/core@1.6.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.6.3"></script>
 <script>
-    // ── Live image preview ─────────────────────────────────────────
-    function previewImage(input, previewId) {
-        const preview = document.getElementById(previewId);
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                preview.src = e.target.result;
-                preview.classList.remove('d-none');
-                // In edit modal, hide the no-image placeholder
-                const noImg = document.getElementById('edit_no_image');
-                if (noImg) noImg.classList.add('d-none');
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
+function productsCatalogApp(config) {
+    return {
+        products: config.initialProducts || [],
+        sourceTab: config.sourceTab || 'all',
+        totalProductsCount: config.totalProductsCount || 0,
+        searchQuery: '',
+        drawerOpen: false,
+        activeProduct: null,
+        activeMenuProduct: null,
+        menuX: 0,
+        menuY: 0,
 
-    // ── Edit modal population ──────────────────────────────────────
-    function openEdit(id, name, sku, category, subcategory, price, stock, imageUrl) {
-        document.getElementById('edit_name').value        = name;
-        document.getElementById('edit_sku').value         = sku;
-        document.getElementById('edit_category').value    = category;
-        document.getElementById('edit_subcategory').value = subcategory;
-        document.getElementById('edit_price').value       = price;
-        document.getElementById('edit_stock').value       = stock;
-        document.getElementById('editProductForm').action = '{{ url('/products') }}/' + id;
+        // Modal states
+        addProductModalOpen: false,
+        editProductModalOpen: false,
+        editingProduct: {},
+        variantsModalOpen: false,
+        activeVariantsProduct: null,
 
-        // Reset file input
-        document.getElementById('edit_image_input').value = '';
-        document.getElementById('edit_remove_image').checked = false;
-
-        // Show / hide current image preview
-        const preview = document.getElementById('edit_image_preview');
-        const noImg   = document.getElementById('edit_no_image');
-        const removeWrap = document.getElementById('edit_remove_wrap');
-        if (imageUrl) {
-            preview.src = imageUrl;
-            preview.classList.remove('d-none');
-            noImg.classList.add('d-none');
-            removeWrap.classList.remove('d-none');
-        } else {
-            preview.src = '';
-            preview.classList.add('d-none');
-            noImg.classList.remove('d-none');
-            removeWrap.classList.add('d-none');
-        }
-
-        new bootstrap.Modal(document.getElementById('editProductModal')).show();
-    }
-
-    // ── Shopify Sync ───────────────────────────────────────────────
-    async function syncShopify(event) {
-        const btn = event.target.closest('button');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Syncing...';
-        btn.disabled = true;
-        try {
-            const response = await fetch('{{ route('shopify.sync') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                }
+        get filteredProducts() {
+            if (!this.searchQuery.trim()) {
+                return this.products;
+            }
+            const q = this.searchQuery.toLowerCase().trim();
+            return this.products.filter(p => {
+                const nameMatch = (p.name || '').toLowerCase().includes(q);
+                const skuMatch = (p.sku || '').toLowerCase().includes(q);
+                const catMatch = (p.category || '').toLowerCase().includes(q);
+                return nameMatch || skuMatch || catMatch;
             });
-            const data = await response.json();
-            if (data.disabled) { alert(data.message); }
-            else if (data.success) { alert('\u2713 ' + data.message); location.reload(); }
-            else { alert('Sync failed: ' + data.message); }
-        } catch (error) {
-            alert('Network error during sync.');
-        } finally {
-            btn.innerHTML = originalHtml;
-            btn.disabled  = false;
-        }
-    }
+        },
 
-    // ── Sync Collections ───────────────────────────────────────────
-    async function syncCollections(event) {
-        const btn = event.target.closest('button');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Syncing...';
-        btn.disabled = true;
-        try {
-            const response = await fetch('{{ route('shopify.sync.collections') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json',
-                }
-            });
-            const data = await response.json();
-            if (data.disabled) { alert(data.message); }
-            else if (data.success) { alert('\u2713 ' + data.message); }
-            else { alert('Sync failed: ' + data.message); }
-        } catch (error) {
-            alert('Network error during sync.');
-        } finally {
-            btn.innerHTML = originalHtml;
-            btn.disabled  = false;
-        }
-    }
+        get sortedProducts() {
+            return [...this.filteredProducts];
+        },
 
-    // ── Re-open add modal on validation error ──────────────────────
-    @if($errors->any())
-        document.addEventListener('DOMContentLoaded', () => {
-            new bootstrap.Modal(document.getElementById('addProductModal')).show();
-        });
-    @endif
+        openProductDrawer(product) {
+            this.activeProduct = product;
+            this.drawerOpen = true;
+        },
 
-    // ── Manage Variants ────────────────────────────────────────────
-    let currentVariantsProductId = null;
-    let currentVariantsIsShopify = false;
-
-    async function openVariantsModal(productId, productName, isShopify) {
-        currentVariantsProductId = productId;
-        currentVariantsIsShopify = isShopify;
-        document.getElementById('variants-modal-product-name').textContent = productName;
-        document.getElementById('add-variant-section').classList.toggle('d-none', isShopify);
-        document.getElementById('shopify-variants-note').classList.toggle('d-none', !isShopify);
-        document.getElementById('variants-list-loading').classList.remove('d-none');
-        document.getElementById('variants-list-container').classList.add('d-none');
-        new bootstrap.Modal(document.getElementById('variantsModal')).show();
-        await refreshVariantsList();
-    }
-
-    async function refreshVariantsList() {
-        try {
-            const resp = await fetch(`/products/${currentVariantsProductId}/variants`, {
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-            });
-            const variants = await resp.json();
-            document.getElementById('variants-list-loading').classList.add('d-none');
-            const container = document.getElementById('variants-list-container');
-            container.classList.remove('d-none');
-            if (variants.length === 0) {
-                container.innerHTML = '<p class="text-muted small py-2">No variants yet.</p>';
+        toggleProductActionMenu(product, event) {
+            if (this.activeMenuProduct && this.activeMenuProduct.id === product.id) {
+                this.closeProductActionMenu();
                 return;
             }
-            const delBtn = !currentVariantsIsShopify
-                ? (id) => `<button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteVariant(${id})" title="Delete"><i class="fas fa-trash"></i></button>`
-                : () => '';
-            const stockBadge = (stock) => stock > 5 ? 'text-success' : (stock > 0 ? 'text-warning' : 'text-danger');
-            container.innerHTML = `<table class="table table-sm table-bordered mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:36px;">Color</th>
-                        <th>Color Name</th>
-                        <th>Size</th>
-                        <th>SKU</th>
-                        <th>Price</th>
-                        <th style="width:160px;">Stock</th>
-                        <th style="width:${!currentVariantsIsShopify ? '80' : '50'}px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${variants.map(v => `<tr id="vrow-${v.id}">
-                        <td class="text-center">${v.color_code ? `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:${v.color_code};border:1px solid #ccc;"></span>` : '&mdash;'}</td>
-                        <td>${v.color || '&mdash;'}</td>
-                        <td>${v.size || '&mdash;'}</td>
-                        <td><code>${v.sku || '&mdash;'}</code></td>
-                        <td>${v.price ? 'Rs. ' + parseFloat(v.price).toLocaleString('en-US', {minimumFractionDigits:2}) : '<span class="text-muted fst-italic">Product price</span>'}</td>
-                        <td>
-                            <div class="d-flex align-items-center gap-1">
-                                <input type="number" id="vstk-${v.id}" class="form-control form-control-sm text-center fw-semibold ${stockBadge(v.stock)}"
-                                    value="${v.stock}" min="0" style="width:68px;"
-                                    onkeydown="if(event.key==='Enter'){saveVariantStock(${v.id},${currentVariantsProductId})}">
-                                <button class="btn btn-sm btn-outline-primary px-2" onclick="saveVariantStock(${v.id},${currentVariantsProductId})" title="Save stock" id="vstkbtn-${v.id}">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td class="text-center">${delBtn(v.id)}</td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>`;
-            updateProductRowVariants(currentVariantsProductId, variants);
-        } catch (e) {
-            document.getElementById('variants-list-loading').classList.add('d-none');
-            document.getElementById('variants-list-container').innerHTML = '<p class="text-danger small">Failed to load variants.</p>';
-            document.getElementById('variants-list-container').classList.remove('d-none');
-        }
-    }
 
-    async function saveVariantStock(variantId, productId) {
-        const input = document.getElementById(`vstk-${variantId}`);
-        const btn   = document.getElementById(`vstkbtn-${variantId}`);
-        const newStock = parseInt(input.value);
-        if (isNaN(newStock) || newStock < 0) { input.focus(); return; }
+            const btn = event.currentTarget || event.target.closest('button');
+            if (!btn) return;
 
-        const origHtml = btn.innerHTML;
-        btn.innerHTML  = '<i class="fas fa-spinner fa-spin"></i>';
-        btn.disabled   = true;
-        input.disabled = true;
+            const rect = btn.getBoundingClientRect();
+            const menuWidth = 190;
+            const menuHeight = 140;
 
-        try {
-            const resp = await fetch(`/products/${productId}/variants/${variantId}/stock`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                body: JSON.stringify({ stock: newStock })
-            });
-            const data = await resp.json();
-            if (data.success) {
-                // Update stock colour class
-                input.className = input.className.replace(/text-(success|warning|danger)/g, '');
-                const cls = newStock > 5 ? 'text-success' : (newStock > 0 ? 'text-warning' : 'text-danger');
-                input.classList.add(cls);
-                btn.innerHTML = '<i class="fas fa-check text-success"></i>';
-                if (data.shopify_synced) {
-                    btn.title = 'Saved & synced to Shopify';
+            let left = rect.right - menuWidth;
+            if (left < 8) left = 8;
+            if (left + menuWidth > window.innerWidth - 8) {
+                left = window.innerWidth - menuWidth - 8;
+            }
+
+            let top = rect.bottom + 6;
+            if (rect.bottom + menuHeight + 8 > window.innerHeight && rect.top > menuHeight + 8) {
+                top = rect.top - menuHeight - 6;
+            }
+
+            this.menuX = Math.round(left);
+            this.menuY = Math.round(top);
+            this.activeMenuProduct = product;
+
+            this.$nextTick(() => {
+                const menuEl = document.getElementById('productActionsFloatingMenu');
+                if (btn && menuEl && window.FloatingUIDOM) {
+                    const { computePosition, offset, flip, shift } = window.FloatingUIDOM;
+                    computePosition(btn, menuEl, {
+                        placement: 'bottom-end',
+                        strategy: 'fixed',
+                        middleware: [
+                            offset(6),
+                            flip({ padding: 8 }),
+                            shift({ padding: 8 })
+                        ]
+                    }).then(({ x, y }) => {
+                        this.menuX = Math.round(x);
+                        this.menuY = Math.round(y);
+                    }).catch(() => {});
                 }
-                setTimeout(() => { btn.innerHTML = origHtml; btn.title = 'Save stock'; }, 1500);
-                updateProductRowStock(productId, data.product_stock, data.variants_count || 0);
-            } else {
-                alert(data.error || 'Failed to update stock.');
-                btn.innerHTML = origHtml;
+            });
+        },
+
+        closeProductActionMenu() {
+            this.activeMenuProduct = null;
+        },
+
+        openAddProductModal() {
+            this.addProductModalOpen = true;
+        },
+
+        openEditModal(product) {
+            this.editingProduct = {
+                id: product.id,
+                name: product.name,
+                sku: product.sku,
+                category: product.category,
+                subcategory: product.subcategory,
+                price: product.price,
+                stock: product.stock,
+            };
+            this.editProductModalOpen = true;
+        },
+
+        openVariantsModal(product) {
+            this.activeVariantsProduct = product;
+            this.variantsModalOpen = true;
+        },
+
+        openBarcodeModal(product) {
+            // Open standard barcode label generation for product
+            window.open(`/products?print_barcode=${product.id}`, '_blank');
+        },
+
+        confirmDeleteProduct(product) {
+            if (confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+                const f = document.getElementById('deleteProductRealForm');
+                f.action = product.delete_url;
+                f.submit();
             }
-        } catch (e) {
-            alert('Network error. Please try again.');
-            btn.innerHTML = origHtml;
+        },
+
+        exportCatalogCsv() {
+            const rows = this.filteredProducts;
+            if (!rows.length) {
+                alert('No products to export.');
+                return;
+            }
+
+            const headers = ['ID', 'Name', 'SKU', 'Category', 'Subcategory', 'Price', 'Stock', 'Source'];
+            const csvRows = [headers.join(',')];
+
+            rows.forEach(p => {
+                const values = [
+                    p.id,
+                    `"${p.name.replace(/"/g, '""')}"`,
+                    `"${p.sku}"`,
+                    `"${(p.category || '').replace(/"/g, '""')}"`,
+                    `"${(p.subcategory || '').replace(/"/g, '""')}"`,
+                    p.price.toFixed(2),
+                    p.stock,
+                    p.is_shopify ? 'Shopify' : 'Local',
+                ];
+                csvRows.push(values.join(','));
+            });
+
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `catalog_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
-        btn.disabled   = false;
-        input.disabled = false;
-    }
-
-    async function addVariant() {
-        const color = document.getElementById('v_color').value.trim();
-        const colorCode = document.getElementById('v_color_code').value.trim();
-        const size = document.getElementById('v_size').value.trim();
-        const sku = document.getElementById('v_sku').value.trim();
-        const price = document.getElementById('v_price').value;
-        const stock = document.getElementById('v_stock').value;
-        if (!color && !size) { alert('Please provide at least a Color or Size.'); return; }
-        if (stock === '' || parseInt(stock) < 0) { alert('Please enter a valid stock quantity (0 or more).'); return; }
-        const btn = document.getElementById('add-variant-btn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>';
-        try {
-            const resp = await fetch(`/products/${currentVariantsProductId}/variants`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                body: JSON.stringify({ color: color || null, color_code: colorCode || null, size: size || null, sku: sku || null, price: price || null, stock: parseInt(stock) })
-            });
-            const data = await resp.json();
-            if (data.success) {
-                ['v_color','v_color_code','v_size','v_sku','v_price'].forEach(id => document.getElementById(id).value = '');
-                document.getElementById('v_stock').value = '0';
-                await refreshVariantsList();
-            } else { alert(data.errors ? Object.values(data.errors).flat().join('\n') : (data.error || 'Failed to add variant.')); }
-        } catch(e) { alert('Network error. Please try again.'); }
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-plus me-1"></i> Add Variant';
-    }
-
-    async function deleteVariant(variantId) {
-        if (!confirm('Delete this variant? This cannot be undone.')) return;
-        try {
-            const resp = await fetch(`/products/${currentVariantsProductId}/variants/${variantId}`, {
-                method: 'DELETE',
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-            });
-            const data = await resp.json();
-            if (data.success) { await refreshVariantsList(); }
-            else { alert(data.error || 'Failed to delete variant.'); }
-        } catch(e) { alert('Network error. Please try again.'); }
-    }
-
-    // ── Advanced Barcode ───────────────────────────────────────────────────────────────
-    let _bcProduct = {};
-    let _bcTemplates = {
-        standard: { height: '25mm', display: ['brand', 'tagline', 'sku', 'name', 'price'] },
-        compact: { height: '20mm', display: ['brand', 'sku', 'price'] },
-        minimal: { height: '25mm', display: ['sku', 'price'] }
     };
-    let _currentTemplate = 'standard';
-    let _customText = { brand: 'APPAREL OUTLET', tagline: 'PREMIUM QUALITY | 100% COTTON' };
-
-    function openBarcodeModal(id, name, sku, price) {
-        _bcProduct = { id, name, sku, price: parseFloat(price).toLocaleString('en-US', { minimumFractionDigits: 0 }) };
-        
-        // Populate the dropdown with this product only (simulate selection)
-        const sel = document.getElementById('bc-product-select');
-        sel.innerHTML = `<option value="${id}" selected>${name} (${sku}) - Rs. ${_bcProduct.price}</option>`;
-
-        // Update customized texts dynamically
-        document.getElementById('val-sku').textContent = sku;
-        document.getElementById('val-name').textContent = name;
-        document.getElementById('val-price').textContent = 'Rs. ' + _bcProduct.price;
-
-        document.getElementById('bc-qty').value      = 1;
-        document.getElementById('bc-per-row').value  = 2;
-        document.getElementById('bc-format').value   = 'CODE128';
-        
-        resetBarcodeDefaults();
-        new bootstrap.Modal(document.getElementById('barcodeModal')).show();
-    }
-
-    function getBarcodeOptions(format) {
-        const size = document.getElementById('bc-size').value;
-        const options = { format, lineColor: '#000', width: 1.5, height: 30, displayValue: false, margin: 0 };
-
-        if (size === '38x25') {
-            options.width = 1.15;
-            options.height = 28;
-        } else if (size === '38x20') {
-            options.width = 1.2;
-            options.height = 24;
-        }
-
-        return options;
-    }
-
-    function applySizeSpecificPreviewStyles() {
-        const size = document.getElementById('bc-size').value;
-        const barcode = document.getElementById('barcode-svg');
-        const brand = document.getElementById('prev-brand');
-        const tagline = document.getElementById('prev-tagline');
-        const sku = document.getElementById('prev-sku');
-        const name = document.getElementById('prev-name');
-        const price = document.getElementById('prev-price');
-
-        barcode.style.maxWidth = size === '38x25' ? '32mm' : (size === '38x20' ? '33mm' : '100%');
-        barcode.style.height = size === '38x20' ? '6mm' : '7mm';
-
-        brand.style.fontSize = size === '38x20' ? '7.2pt' : '8pt';
-        brand.style.marginBottom = size === '38x20' ? '0.25mm' : '0.5mm';
-        tagline.style.fontSize = size === '38x20' ? '3.8pt' : '4.5pt';
-        tagline.style.marginBottom = size === '38x20' ? '0.35mm' : '1mm';
-        sku.style.fontSize = size === '38x20' ? '5pt' : '6pt';
-        sku.style.marginTop = size === '38x20' ? '0.25mm' : '0.5mm';
-        name.style.fontSize = size === '38x20' ? '4pt' : '5pt';
-        name.style.marginTop = size === '38x20' ? '0.2mm' : '0.5mm';
-        price.style.fontSize = size === '38x20' ? '6.6pt' : '7.5pt';
-        price.style.marginTop = size === '38x20' ? '0.25mm' : '0.5mm';
-    }
-
-    function generateLiveBarcode() {
-        if (!_bcProduct.sku) return;
-        
-        // Update DOM elements
-        document.getElementById('prev-brand').textContent = _customText.brand;
-        document.getElementById('prev-tagline').textContent = _customText.tagline;
-        document.getElementById('prev-sku').textContent = _bcProduct.sku;
-        document.getElementById('prev-name').textContent = _bcProduct.name;
-        document.getElementById('prev-price').textContent = 'Rs. ' + _bcProduct.price;
-
-        const fmt = document.getElementById('bc-format').value;
-        try {
-            JsBarcode('#barcode-svg', _bcProduct.sku, getBarcodeOptions(fmt));
-        } catch(e) {
-            JsBarcode('#barcode-svg', _bcProduct.sku, getBarcodeOptions('CODE128'));
-            document.getElementById('bc-format').value = 'CODE128';
-        }
-        applySizeSpecificPreviewStyles();
-    }
-
-    function togglePreview(field) {
-        const isChecked = document.getElementById('chk-' + field).checked;
-        const el = document.getElementById('prev-' + field);
-        if (el) el.style.display = isChecked ? 'block' : 'none';
-    }
-
-    function editContent(field) {
-        let currentText = '';
-        if (field === 'brand') currentText = _customText.brand;
-        else if (field === 'tagline') currentText = _customText.tagline;
-        else if (field === 'sku') currentText = _bcProduct.sku;
-        else if (field === 'name') currentText = _bcProduct.name;
-        else if (field === 'price') currentText = 'Rs. ' + _bcProduct.price;
-
-        const newText = prompt(`Enter new text for ${field.toUpperCase()}:`, currentText);
-        if (newText !== null) {
-            if (field === 'brand') _customText.brand = newText;
-            else if (field === 'tagline') _customText.tagline = newText;
-            else if (field === 'sku') _bcProduct.sku = newText;
-            else if (field === 'name') _bcProduct.name = newText;
-            else if (field === 'price') _bcProduct.price = newText.replace('Rs. ', ''); // Store cleanly if needed
-
-            document.getElementById('val-' + field).textContent = field === 'price' && !newText.includes('Rs') ? 'Rs. ' + newText : newText;
-            generateLiveBarcode();
-        }
-    }
-
-    function applyTemplate(tmpl, el) {
-        document.querySelectorAll('.template-card').forEach(c => {
-            c.style.borderColor = '#dee2e6';
-            const icon = c.querySelector('i');
-            if (icon) icon.remove();
-        });
-        if(el) {
-            el.style.borderColor = '#f59e0b';
-            el.innerHTML += '<i class="fas fa-check-circle text-warning position-absolute top-0 end-0 m-1"></i>';
-        }
-
-        _currentTemplate = tmpl;
-        const conf = _bcTemplates[tmpl];
-        
-        // Update checkboxes
-        ['brand', 'tagline', 'sku', 'name', 'price'].forEach(f => {
-            const chk = document.getElementById('chk-' + f);
-            chk.checked = conf.display.includes(f);
-            togglePreview(f);
-        });
-
-        // Update Size Dropdown
-        const sizeSel = document.getElementById('bc-size');
-        if (tmpl === 'compact') sizeSel.value = '38x20';
-        else sizeSel.value = '38x25';
-        updateLabelSize();
-    }
-
-    function updateLabelSize() {
-        const val = document.getElementById('bc-size').value; // 38x25
-        const [w, h] = val.split('x');
-        const wrap = document.getElementById('barcode-preview-wrap');
-        wrap.style.width = w + 'mm';
-        wrap.style.height = h + 'mm';
-        
-        document.getElementById('lbl-dim-w').textContent = w + 'mm';
-        document.getElementById('lbl-dim-h').textContent = h + 'mm';
-        document.getElementById('lbl-size-badge').textContent = `Size: ${w}mm x ${h}mm`;
-        applySizeSpecificPreviewStyles();
-        generateLiveBarcode();
-    }
-
-    function updatePreviewStyles() {
-        const font = document.getElementById('bc-font').value;
-        const isBold = document.getElementById('bc-bold').checked;
-        const wrap = document.getElementById('barcode-preview-wrap');
-        
-        wrap.style.fontFamily = font;
-        wrap.style.fontWeight = isBold ? 'bold' : 'normal';
-    }
-
-    function resetBarcodeDefaults() {
-        _customText = { brand: 'APPAREL OUTLET', tagline: 'PREMIUM QUALITY | 100% COTTON' };
-        document.getElementById('val-brand').textContent = _customText.brand;
-        document.getElementById('val-tagline').textContent = _customText.tagline;
-        
-        document.getElementById('bc-font').value = "'Zebra 0', sans-serif";
-        document.getElementById('bc-bold').checked = true;
-        
-        applyTemplate('standard', document.querySelector('.template-card'));
-        updatePreviewStyles();
-        generateLiveBarcode();
-    }
-
-    // ── Add Product Modal — Variant Rows ─────────────────────────────────────
-    let _addVariantIdx = 0;
-
-    function addProductVariantRow() {
-        const idx   = _addVariantIdx++;
-        const tbody = document.getElementById('add_variants_tbody');
-        const row   = document.createElement('tr');
-        row.id      = 'avrow_' + idx;
-        row.innerHTML = `
-            <td class="text-center" style="padding:4px 6px;">
-                <input type="color" id="avc_picker_${idx}"
-                    class="form-control form-control-color p-0 border-0" value="#FFD700"
-                    style="width:30px;height:30px;cursor:pointer;"
-                    oninput="document.getElementById('avc_code_${idx}').value = this.value">
-            </td>
-            <td style="padding:4px 4px;">
-                <input type="text" name="variants[${idx}][color]" id="avc_color_${idx}"
-                    class="form-control form-control-sm" placeholder="e.g. Gold" list="colorSuggestions">
-            </td>
-            <td style="padding:4px 4px;">
-                <input type="text" name="variants[${idx}][size]"
-                    class="form-control form-control-sm" placeholder="e.g. M, 7, Free Size" list="sizeSuggestions">
-            </td>
-            <td style="padding:4px 4px;">
-                <input type="text" name="variants[${idx}][sku]"
-                    class="form-control form-control-sm" placeholder="Optional">
-            </td>
-            <td style="padding:4px 4px;">
-                <input type="number" name="variants[${idx}][price]"
-                    class="form-control form-control-sm" placeholder="Blank = product price" step="0.01" min="0">
-            </td>
-            <td style="padding:4px 4px;">
-                <input type="number" name="variants[${idx}][stock]"
-                    class="form-control form-control-sm" value="0" min="0">
-                <input type="hidden" name="variants[${idx}][color_code]" id="avc_code_${idx}" value="#FFD700">
-            </td>
-            <td class="text-center" style="padding:4px 2px;">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProductVariantRow(${idx})" title="Remove">
-                    <i class="fas fa-times"></i>
-                </button>
-            </td>`;
-        tbody.appendChild(row);
-        _updateAddVariantUI();
-    }
-
-    function removeProductVariantRow(idx) {
-        const row = document.getElementById('avrow_' + idx);
-        if (row) row.remove();
-        _updateAddVariantUI();
-    }
-
-    function _updateAddVariantUI() {
-        const tbody  = document.getElementById('add_variants_tbody');
-        const count  = tbody ? tbody.querySelectorAll('tr').length : 0;
-        document.getElementById('add_variant_count').textContent = count;
-        document.getElementById('add_variant_rows_empty').classList.toggle('d-none',  count > 0);
-        document.getElementById('add_variants_table_wrap').classList.toggle('d-none', count === 0);
-        document.getElementById('add_variant_footer_hint').classList.toggle('d-none', count === 0);
-        // When variants exist, hint user to set stock 0
-        const stockHint = document.getElementById('add_stock_hint');
-        if (stockHint) stockHint.classList.toggle('text-warning', count > 0);
-    }
-
-    // ── Real-time DOM helpers ──────────────────────────────────────────────
-    function showProductToast(message, type = 'success') {
-        const colors = {success:'#198754',danger:'#dc3545',warning:'#856404',info:'#0c63e4'};
-        const icons  = {success:'fa-check-circle',danger:'fa-exclamation-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
-        const el = document.createElement('div');
-        el.style.cssText = `position:fixed;top:70px;right:20px;z-index:9999;background:${colors[type]||colors.success};color:#fff;padding:10px 18px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);font-size:.9rem;max-width:340px;transition:opacity .4s;`;
-        el.innerHTML = `<i class="fas ${icons[type]||icons.success} me-2"></i>${message}`;
-        document.body.appendChild(el);
-        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 420); }, 2800);
-    }
-
-    function buildVariantDotsHtml(variants) {
-        if (!variants || variants.length === 0) return '';
-        let html = '';
-        variants.slice(0, 6).forEach(v => {
-            const tip = [v.color, v.size].filter(Boolean).join(' / ');
-            if (v.color_code) {
-                html += `<span title="${tip} (${v.stock})" style="width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid #ccc;background:${v.color_code};"></span>`;
-            } else if (v.size) {
-                html += `<span class="badge bg-secondary" title="${tip} (${v.stock})" style="font-size:.6rem;padding:2px 4px;">${v.size}</span>`;
-            } else {
-                html += `<span title="${tip} (${v.stock})" style="width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid #ccc;background:#ccc;"></span>`;
-            }
-        });
-        if (variants.length > 6) html += `<small class="text-muted">+${variants.length - 6}</small>`;
-        if (variants.length > 0) html += `<small class="text-muted ms-1">(${variants.length} variants)</small>`;
-        return html;
-    }
-
-    function updateProductRowStock(productId, stock, variantCount) {
-        stock = parseInt(stock) || 0;
-        const cls = stock > 5 ? 'text-success' : (stock > 0 ? 'text-warning' : 'text-danger');
-        const el = document.getElementById(`ptd-stock-${productId}`);
-        if (el) el.innerHTML = `<span class="fw-semibold ${cls}">${stock}</span>` +
-            (variantCount > 0 ? `<br><small class="text-muted">across ${variantCount} variants</small>` : '');
-        const st = document.getElementById(`ptd-status-${productId}`);
-        if (st) st.innerHTML = stock > 0 ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Out of Stock</span>';
-        const tr = document.querySelector(`tr[data-product-id="${productId}"]`);
-        if (tr) tr.dataset.stock = stock <= 0 ? 'out' : (stock <= 5 ? 'low' : 'instock');
-    }
-
-    function updateProductRowVariants(productId, variants) {
-        const el = document.getElementById(`ptd-vdots-${productId}`);
-        if (el) el.innerHTML = buildVariantDotsHtml(variants);
-        const total = (variants || []).reduce((s, v) => s + (parseInt(v.stock) || 0), 0);
-        updateProductRowStock(productId, total, (variants || []).length);
-    }
-
-    function updateProductRow(product) {
-        const tr = document.querySelector(`tr[data-product-id="${product.id}"]`);
-        if (!tr) return;
-        const variants = product.variants || [];
-        const total = variants.length > 0 ? variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0) : parseInt(product.stock) || 0;
-        const imgEl = document.getElementById(`ptd-img-${product.id}`);
-        if (imgEl) imgEl.innerHTML = product.image_url
-            ? `<img src="${product.image_url}" alt="${product.name}" class="rounded" style="width:40px;height:40px;object-fit:cover;">`
-            : `<div class="d-flex align-items-center justify-content-center rounded" style="width:40px;height:40px;background:var(--light-grey);"><i class="fas fa-tshirt text-gold"></i></div>`;
-        const nameEl = document.getElementById(`ptd-nametxt-${product.id}`);
-        if (nameEl) nameEl.textContent = product.name;
-        const skuEl = document.getElementById(`ptd-sku-${product.id}`);
-        if (skuEl) skuEl.textContent = product.sku;
-        const catEl = document.getElementById(`ptd-cat-${product.id}`);
-        if (catEl) catEl.innerHTML = `<span class="badge bg-light text-dark border">${product.category || '&mdash;'}</span>` +
-            (product.subcategory ? `<br><span class="badge bg-secondary bg-opacity-25 text-secondary border mt-1" style="font-size:.7rem;"><i class="fas fa-angle-right me-1"></i>${product.subcategory}</span>` : '');
-        const priceEl = document.getElementById(`ptd-price-${product.id}`);
-        if (priceEl) priceEl.textContent = 'Rs. ' + parseFloat(product.price).toLocaleString('en-US', {minimumFractionDigits:2});
-        updateProductRowStock(product.id, total, variants.length);
-        const vdotsEl = document.getElementById(`ptd-vdots-${product.id}`);
-        if (vdotsEl) vdotsEl.innerHTML = buildVariantDotsHtml(variants);
-        const editBtn = document.getElementById(`ptd-editbtn-${product.id}`);
-        if (editBtn) {
-            const esc = s => (s || '').replace(/'/g, "\\'");
-            editBtn.setAttribute('onclick', `openEdit(${product.id},'${esc(product.name)}','${esc(product.sku)}','${esc(product.category)}','${esc(product.subcategory)}','${product.price}','${total}','${esc(product.image_url)}')`);
-        }
-    }
-
-    function prependProductRow(product) {
-        const tbody = document.querySelector('.pos-table tbody');
-        if (!tbody) return;
-        const emptyMsg = tbody.querySelector('td[colspan="10"]');
-        if (emptyMsg) emptyMsg.closest('tr').remove();
-        const variants = product.variants || [];
-        const total = variants.length > 0 ? variants.reduce((s, v) => s + (parseInt(v.stock) || 0), 0) : parseInt(product.stock) || 0;
-        const esc = s => (s || '').replace(/'/g, "\\'");
-        const stockCls = total > 5 ? 'text-success' : (total > 0 ? 'text-warning' : 'text-danger');
-        const imgHtml = product.image_url
-            ? `<img src="${product.image_url}" alt="${product.name}" class="rounded" style="width:40px;height:40px;object-fit:cover;">`
-            : `<div class="d-flex align-items-center justify-content-center rounded" style="width:40px;height:40px;background:var(--light-grey);"><i class="fas fa-tshirt text-gold"></i></div>`;
-        const catHtml = `<span class="badge bg-light text-dark border">${product.category || '&mdash;'}</span>` +
-            (product.subcategory ? `<br><span class="badge bg-secondary bg-opacity-25 text-secondary border mt-1" style="font-size:.7rem;"><i class="fas fa-angle-right me-1"></i>${product.subcategory}</span>` : '');
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const eN = esc(product.name), eSku = esc(product.sku), eCat = esc(product.category), eSub = esc(product.subcategory), eImg = esc(product.image_url);
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-source', 'local');
-        tr.setAttribute('data-stock', total <= 0 ? 'out' : (total <= 5 ? 'low' : 'instock'));
-        tr.setAttribute('data-product-id', product.id);
-        tr.innerHTML = `
-            <td>${product.id}</td>
-            <td id="ptd-img-${product.id}">${imgHtml}</td>
-            <td id="ptd-name-${product.id}">
-                <strong id="ptd-nametxt-${product.id}">${product.name}</strong>
-                <div id="ptd-vdots-${product.id}" class="d-flex align-items-center gap-1 mt-1 flex-wrap">${buildVariantDotsHtml(variants)}</div>
-            </td>
-            <td><code id="ptd-sku-${product.id}">${product.sku}</code></td>
-            <td id="ptd-cat-${product.id}">${catHtml}</td>
-            <td class="fw-bold" id="ptd-price-${product.id}">Rs. ${parseFloat(product.price).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-            <td id="ptd-stock-${product.id}"><span class="fw-semibold ${stockCls}">${total}</span>${variants.length > 0 ? '<br><small class="text-muted">across ' + variants.length + ' variants</small>' : ''}</td>
-            <td><span class="badge bg-warning text-dark"><i class="fas fa-store me-1"></i> Local</span></td>
-            <td id="ptd-status-${product.id}">${total > 0 ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Out of Stock</span>'}</td>
-            <td>
-                <button class="btn btn-sm btn-outline-info me-1" title="Manage Variants"
-                    onclick="openVariantsModal(${product.id},'${eN}',false)"><i class="fas fa-palette"></i></button>
-                <button class="btn btn-sm btn-outline-warning me-1" title="Print Barcode"
-                    onclick="openBarcodeModal(${product.id},'${eN}','${eSku}','${product.price}')"><i class="fas fa-barcode"></i></button>
-                <button class="btn btn-sm btn-outline-primary me-1" title="Edit" id="ptd-editbtn-${product.id}"
-                    onclick="openEdit(${product.id},'${eN}','${eSku}','${eCat}','${eSub}','${product.price}','${total}','${eImg}')"><i class="fas fa-edit"></i></button>
-                <form method="POST" action="/products/${product.id}" class="delete-product-form d-inline"
-                    data-product-id="${product.id}" data-product-name="${eN}">
-                    <input type="hidden" name="_token" value="${csrf}">
-                    <input type="hidden" name="_method" value="DELETE">
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
-                </form>
-            </td>`;
-        tbody.prepend(tr);
-        attachDeleteHandler(tr.querySelector('.delete-product-form'));
-    }
-
-    function attachDeleteHandler(form) {
-        if (!form) return;
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const productId   = this.dataset.productId;
-            const productName = this.dataset.productName || 'this product';
-            if (!confirm(`Delete product "${productName}"? This cannot be undone.`)) return;
-            try {
-                const resp = await fetch(this.action, {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    body: new FormData(this)
-                });
-                const data = await resp.json();
-                if (resp.ok && data.success) {
-                    const tr = document.querySelector(`tr[data-product-id="${productId}"]`);
-                    if (tr) { tr.style.transition = 'opacity .3s'; tr.style.opacity = '0'; setTimeout(() => tr.remove(), 320); }
-                    showProductToast(data.message || 'Product deleted.', 'success');
-                } else { alert(data.message || 'Delete failed.'); }
-            } catch(err) { alert('Network error.'); }
-        });
-    }
-
-    // Reset variant rows when add modal is closed
-    document.addEventListener('DOMContentLoaded', () => {
-        const addModal = document.getElementById('addProductModal');
-        if (addModal) {
-            addModal.addEventListener('hidden.bs.modal', () => {
-                document.getElementById('add_variants_tbody').innerHTML = '';
-                _addVariantIdx = 0;
-                _updateAddVariantUI();
-            });
-        }
-
-        // Intercept Add Product form — AJAX submit
-        const addForm = document.getElementById('addProductForm');
-        if (addForm) {
-            addForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const btn = this.querySelector('[type=submit]');
-                const origHtml = btn.innerHTML;
-                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-                this.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                try {
-                    const resp = await fetch(this.action, {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                        body: new FormData(this)
-                    });
-                    const data = await resp.json();
-                    if (resp.ok && data.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('addProductModal')).hide();
-                        this.reset();
-                        document.getElementById('add_image_preview').classList.add('d-none');
-                        prependProductRow(data.product);
-                        showProductToast('"' + data.product.name + '" added successfully.', 'success');
-                    } else if (resp.status === 422 && data.errors) {
-                        Object.entries(data.errors).forEach(([field, msgs]) => {
-                            const inp = this.querySelector(`[name="${field}"]`);
-                            if (!inp) return;
-                            inp.classList.add('is-invalid');
-                            let fb = inp.nextElementSibling;
-                            if (!fb || !fb.classList.contains('invalid-feedback')) { fb = document.createElement('div'); fb.className = 'invalid-feedback'; inp.after(fb); }
-                            fb.textContent = msgs[0];
-                        });
-                    } else { alert(data.message || 'Failed to save product.'); }
-                } catch(err) { alert('Network error.'); }
-                btn.disabled = false; btn.innerHTML = origHtml;
-            });
-        }
-
-        // Intercept Edit Product form — AJAX submit
-        const editForm = document.getElementById('editProductForm');
-        if (editForm) {
-            editForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const btn = this.querySelector('[type=submit]');
-                const origHtml = btn.innerHTML;
-                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-                this.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                try {
-                    const resp = await fetch(this.action, {
-                        method: 'POST',
-                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                        body: new FormData(this)
-                    });
-                    const data = await resp.json();
-                    if (resp.ok && data.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('editProductModal')).hide();
-                        updateProductRow(data.product);
-                        showProductToast('"' + data.product.name + '" updated successfully.', 'success');
-                    } else if (resp.status === 422 && data.errors) {
-                        Object.entries(data.errors).forEach(([field, msgs]) => {
-                            const inp = this.querySelector(`[name="${field}"]`);
-                            if (!inp) return;
-                            inp.classList.add('is-invalid');
-                            let fb = inp.nextElementSibling;
-                            if (!fb || !fb.classList.contains('invalid-feedback')) { fb = document.createElement('div'); fb.className = 'invalid-feedback'; inp.after(fb); }
-                            fb.textContent = msgs[0];
-                        });
-                    } else { alert(data.message || 'Failed to update product.'); }
-                } catch(err) { alert('Network error.'); }
-                btn.disabled = false; btn.innerHTML = origHtml;
-            });
-        }
-
-        // Wire up all existing delete forms
-        document.querySelectorAll('.delete-product-form').forEach(attachDeleteHandler);
-    });
-
-    function executeBarcodePrint() {
-        const qty = Math.max(1, parseInt(document.getElementById('bc-qty').value) || 1);
-        const perRow = parseInt(document.getElementById('bc-per-row').value) || 2;
-        const [w, h] = document.getElementById('bc-size').value.split('x'); // e.g. 38, 25
-        
-        const font = document.getElementById('bc-font').value;
-        const isBold = document.getElementById('bc-bold').checked ? 'bold' : 'normal';
-
-        // Get inner HTML of the preview wrap to clone exact visibility
-        const wrap = document.getElementById('barcode-preview-wrap');
-        
-        // We need to clone it to strip out the dimensions indicators before printing
-        const clone = wrap.cloneNode(true);
-        const dim1 = clone.querySelector('#lbl-dim-h'); if(dim1) dim1.remove();
-        const dim2 = clone.querySelector('#lbl-dim-w'); if(dim2) dim2.remove();
-        
-        const singleLabelHtml = clone.innerHTML;
-
-        const sizeClass = `size-${w}x${h}`;
-        const allLabels = Array(qty).fill(`<div class="label ${sizeClass}">${singleLabelHtml}</div>`).join('');
-        
-        // Calculate grid width based on perRow (width * perRow + gaps)
-        const totalWidth = (parseInt(w) * perRow) + ((perRow - 1) * 2); // 2mm gap
-
-        const printHtml = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Barcode Print</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: ${font}; font-weight: ${isBold}; background:#fff; margin: 0; padding: 0; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(${perRow}, ${w}mm);
-            gap: 2mm;
-            width: ${totalWidth}mm;
-            margin: 0 auto;
-            justify-content: center;
-        }
-        .label {
-            width: ${w}mm;
-            height: ${h}mm;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            page-break-inside: avoid;
-            break-inside: avoid;
-            background: #fff;
-            padding: 1mm;
-        }
-        .label.size-38x25 #barcode-svg {
-            max-width: 32mm !important;
-            height: 7mm !important;
-            flex-shrink: 0;
-        }
-        .label.size-38x20 {
-            padding: 0.6mm 1mm;
-        }
-        .label.size-38x20 #barcode-svg {
-            max-width: 33mm !important;
-            height: 6mm !important;
-            flex-shrink: 0;
-        }
-        .label.size-38x20 #prev-brand {
-            font-size: 7.2pt !important;
-            margin-bottom: 0.25mm !important;
-        }
-        .label.size-38x20 #prev-tagline {
-            font-size: 3.8pt !important;
-            margin-bottom: 0.35mm !important;
-        }
-        .label.size-38x20 #prev-sku {
-            font-size: 5pt !important;
-            margin-top: 0.25mm !important;
-        }
-        .label.size-38x20 #prev-name {
-            font-size: 4pt !important;
-            line-height: 1 !important;
-            margin-top: 0.2mm !important;
-            max-height: 4.2pt;
-        }
-        .label.size-38x20 #prev-price {
-            font-size: 6.6pt !important;
-            margin-top: 0.25mm !important;
-        }
-        
-        @page { size: ${totalWidth}mm auto; margin: 0; }
-        @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .grid { padding-top: 2mm; } 
-        }
-    </style>
-</head>
-<body>
-    <div class="grid">${allLabels}</div>
-    <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script>
-</body>
-</html>`;
-
-        const win = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-        if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site to print barcodes.'); return; }
-        win.document.open();
-        win.document.write(printHtml);
-        win.document.close();
-    }
+}
 </script>
 @endpush
